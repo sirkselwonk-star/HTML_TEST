@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Prison Pockets - Cutscene: Best Buy</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; image-rendering:pixelated; }
+  body {
+    background:#000;
+    display:flex; justify-content:center; align-items:center;
+    width:100vw; height:100vh; height:100dvh;
+    font-family:'Press Start 2P', monospace;
+    overflow:hidden; touch-action:none;
+    position:fixed; top:0; left:0;
+  }
+  #game-container {
+    width:800px; height:450px;
+    position:relative; overflow:hidden;
+    background:#001040;
+    border:4px solid #ffe000;
+    box-shadow:0 0 0 4px #000, 0 0 40px #ffe00033;
+    transform-origin:center center;
+  }
+  #scene-canvas {
+    position:absolute; top:0; left:0;
+    display:block; image-rendering:pixelated;
+  }
+  #fx-canvas {
+    position:absolute; top:0; left:0;
+    pointer-events:none; image-rendering:pixelated; z-index:5;
+  }
+  #scanlines {
+    position:absolute; inset:0; z-index:10; pointer-events:none;
+    background:repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px);
+  }
+  #fade {
+    position:absolute; inset:0; background:#000; opacity:1;
+    pointer-events:none; z-index:15; transition:opacity 0s;
+  }
+
+/* Speech bubble */
+#speech-bubble {
+  position:absolute;
+  background:#001030;
+  border:3px solid #ffe000;
+  padding:10px 14px 22px;
+  display:none; z-index:12;
+  min-width:180px; max-width:340px;
+  box-shadow: inset 0 0 12px #001050, 0 0 0 1px #000;
+}
+#speech-bubble.show { display:block; }
+#sb-speaker { font-size:9px; margin-bottom:8px; }
+#sb-text { font-size:11px; color:#e8e8ff; line-height:1.7; }
+#sb-advance { position:absolute; bottom:6px; right:10px; font-size:8px; color:#ffe000; animation:blink 0.8s infinite; display:none; }
+#sb-advance.show { display:block; }
+
+.tail-down-left,
+.tail-down-right,
+.tail-down-center {
+  position:absolute;
+  bottom:-36px;
+  width:0; height:0;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-top:36px solid currentColor;
+}
+.tail-down-left::after,
+.tail-down-right::after,
+.tail-down-center::after {
+  content:''; position:absolute;
+  top:-36px; left:-10px;
+  width:20px; height:3px;
+  background:#001030;
+}
+.tail-down-left   { left:var(--tail-left, auto); right:var(--tail-right, auto); }
+.tail-down-right  { left:var(--tail-left, auto); right:var(--tail-right, auto); }
+.tail-down-center { left:50%; transform:translateX(-50%); }
+
+/* Blue flash for dramatic moments */
+#blue-flash {
+  position:absolute; inset:0;
+  background:rgba(0,70,190,0);
+  pointer-events:none; z-index:8;
+  transition:background 0.15s;
+}
+#blue-flash.flash { background:rgba(0,70,190,0.22); }
+
+/* End card */
+#end-card {
+  position:absolute; inset:0; background:#000;
+  display:none; flex-direction:column;
+  justify-content:center; align-items:center; gap:14px; z-index:25;
+}
+#end-card.show { display:flex; }
+#end-card h2 { color:#ffe000; font-size:12px; text-align:center; line-height:2; }
+#end-card p { color:#888; font-size:7px; text-align:center; line-height:2; }
+#replay-btn {
+  margin-top:14px; background:#001030;
+  border:3px solid #ffe000; color:#ffe000;
+  font-family:'Press Start 2P',monospace; font-size:8px;
+  padding:10px 20px; cursor:pointer;
+}
+#replay-btn:hover { background:#ffe000; color:#000; }
+
+@keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+#title-screen {
+  position:absolute; inset:0; background:#001050;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:center; gap:14px;
+  z-index:30;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+#game-container { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+#title-screen.hidden { display:none; }
+#ts-bar {
+  width:100%; padding:8px 0; text-align:center;
+  font-size:8px; color:#fff; letter-spacing:2px;
+  text-shadow:2px 2px #000;
+}
+.ts-flash { animation: tsFlash 0.35s infinite; }
+@keyframes tsFlash {
+  0%,49%{ background:#0046be; }
+  50%,100%{ background:#002a70; }
+}
+#ts-ep { color:#ffe000; font-size:8px; text-shadow:2px 2px #000; }
+#ts-title {
+  color:#ffe000; font-size:18px;
+  text-align:center; line-height:1.7;
+  text-shadow:3px 3px #000, 0 0 24px #ffe00088;
+  animation:titlePulse 1.8s infinite alternate;
+}
+@keyframes titlePulse {
+  0%{ text-shadow:3px 3px #000, 0 0 12px #ffe00066; }
+  100%{ text-shadow:3px 3px #000, 0 0 32px #ffe000cc; }
+}
+#ts-sub {
+  color:#80a0ff; font-size:8px;
+  text-shadow:1px 1px #000;
+}
+#ts-prompt {
+  margin-top:10px; color:#ffe000; font-size:8px;
+  animation:blink 1s infinite;
+}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="scene-canvas" width="800" height="450"></canvas>
+  <canvas id="fx-canvas"    width="800" height="450"></canvas>
+  <div id="scanlines"></div>
+  <div id="blue-flash"></div>
+  <div id="fade"></div>
+
+  <div id="speech-bubble">
+    <div id="sb-speaker"></div>
+    <div id="sb-text"></div>
+    <div id="sb-advance">&#9660; ANY KEY</div>
+    <div id="sb-tail"></div>
+  </div>
+
+  <div id="title-screen" onclick="tryInput()" ontouchstart="event.preventDefault(); tryInput()">
+    <div id="ts-bar" class="ts-flash" style="pointer-events:none">&#9888; PRISON POCKETS &#9888;</div>
+    <div id="ts-ep" style="pointer-events:none">CUTSCENE</div>
+    <div id="ts-title" style="pointer-events:none">DIGITAL<br>LAND<br>BARON</div>
+    <div id="ts-sub" style="pointer-events:none">a best buy story</div>
+    <div id="ts-prompt" style="pointer-events:none">&#9654; PRESS ANY KEY</div>
+  </div>
+
+  <div id="end-card">
+    <h2>&#128187; DIGITAL LAND BARON &#128187;</h2>
+    <p>"i'm early. i'm always early."<br><br>that's the same as being wrong<br>except you get to say it with confidence.</p>
+    <button id="replay-btn" onclick="location.reload()">&#8634; REPLAY</button>
+  </div>
+</div>
+
+<script>
+// ==================== SETUP ====================
+const sc  = document.getElementById('scene-canvas');
+const ctx = sc.getContext('2d');
+const fx  = document.getElementById('fx-canvas');
+const fxc = fx.getContext('2d');
+const W = 800, H = 450;
+let S = 4;
+
+function px(c, col, x, y, w, h) {
+  c.fillStyle = col;
+  c.fillRect(x*S, y*S, w*S, h*S);
+}
+
+// ==================== AUDIO ====================
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if (audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function beep(freq, type, gain, startOff, dur) {
+  const a = getAudio(), t = a.currentTime + (startOff||0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type||'square'; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(gain||0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t+dur+0.02);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+
+function sfxKeyboard() {
+  beep(1800,'sine',0.06,0,0.02);
+  beep(1400,'sine',0.04,0.03,0.02);
+}
+function sfxBlueFlash() {
+  beep(220,'sawtooth',0.25,0,0.1);
+  beep(180,'sawtooth',0.2,0.08,0.15);
+  beep(110,'sawtooth',0.15,0.2,0.25);
+}
+function sfxSigh() {
+  const a = getAudio(), t = a.currentTime;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(260,t);
+  o.frequency.linearRampToValueAtTime(140,t+0.3);
+  g.gain.setValueAtTime(0.06,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+0.4);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+function sfxTick(isLick) {
+  beep(isLick?380:280,'square',0.025,0,0.02);
+}
+
+// ==================== MUZAK MUSIC ====================
+let musicScheduler = null, musicStep = 0, nextMusicTime = 0;
+const MBPM = 68;
+const mStep = 60/MBPM/4;
+const MN = { C2:65.41,E2:82.41,G2:98,A2:110,C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,_:0 };
+
+// Muzak bass — bland elevator vibes
+const bassRiff = [
+  MN.C2,MN._,MN.C2,MN.E2,  MN.G2,MN._,MN.A2,MN._,
+  MN.C3,MN._,MN.A2,MN.G2,  MN.E2,MN._,MN.C2,MN._,
+  MN.A2,MN._,MN.A2,MN.C3,  MN.E2,MN._,MN.G2,MN.E2,
+  MN.C2,MN.E2,MN.G2,MN._,  MN.A2,MN.G2,MN.E2,MN._,
+];
+// Cheesy melody
+const melRiff = [
+  MN._,MN._,MN.E4,MN._,  MN.G4,MN._,MN.E4,MN.D4,
+  MN._,MN.C4,MN._,MN._,  MN.D4,MN._,MN._,MN._,
+  MN._,MN._,MN.A4,MN._,  MN.G4,MN._,MN.F4,MN.E4,
+  MN._,MN.D4,MN._,MN._,  MN.C4,MN._,MN._,MN._,
+];
+// Simple drums
+const drumRiff = [
+  1,3,3,3, 2,3,3,3, 1,3,3,3, 2,3,3,3,
+  1,3,0,3, 2,3,1,3, 1,3,3,0, 2,3,3,3,
+];
+
+function mBeep(freq,type,gain,t,dur) {
+  if(!audioCtx||!freq) return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+dur+0.02);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+function mKick(t) {
+  const a=audioCtx,o=a.createOscillator(),g=a.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(100,t); o.frequency.exponentialRampToValueAtTime(35,t+0.06);
+  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+0.17);
+  o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+function mSnare(t) {
+  const a=audioCtx, buf=a.createBuffer(1,a.sampleRate*0.08,a.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=a.createBufferSource(); src.buffer=buf;
+  const g=a.createGain(); g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+  const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2000;
+  src.connect(f); f.connect(g); g.connect(a.destination); src.start(t); src.stop(t+0.1);
+  src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
+}
+function mHat(t) {
+  const a=audioCtx, buf=a.createBuffer(1,a.sampleRate*0.03,a.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=a.createBufferSource(); src.buffer=buf;
+  const g=a.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.03);
+  const f=a.createBiquadFilter(); f.type='highpass'; f.frequency.value=9000;
+  src.connect(f); f.connect(g); g.connect(a.destination); src.start(t); src.stop(t+0.04);
+  src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
+}
+
+function musicLoop() {
+  if(!audioCtx) return;
+  while(nextMusicTime < audioCtx.currentTime + 0.12) {
+    const s = musicStep % 32;
+    const t = nextMusicTime;
+    const b = bassRiff[s]; if(b) mBeep(b,'triangle',0.08,t,mStep*1.5);
+    const m = melRiff[s];  if(m) mBeep(m,'sine',0.05,t,mStep*1.2);
+    const dr = drumRiff[s];
+    if(dr===1) mKick(t); else if(dr===2) mSnare(t); else if(dr===3) mHat(t);
+    nextMusicTime += mStep;
+    musicStep++;
+  }
+  musicScheduler = setTimeout(musicLoop, 50);
+}
+function startMusic() {
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  nextMusicTime = audioCtx.currentTime + 0.1;
+  musicLoop();
+}
+function stopMusic() {
+  if(musicScheduler) { clearTimeout(musicScheduler); musicScheduler=null; }
+}
+
+// ==================== BACKGROUND: BEST BUY INTERIOR ====================
+const _prices = Array.from({length:6}, () => Math.floor(Math.random()*900+99));
+
+// Cache the entire static background to an offscreen canvas so we do
+// one drawImage() per frame instead of ~100+ fillRect/fillText calls.
+let _bgCache = null;
+
+function ensureBgCache() {
+  if(_bgCache) return;
+  const oc = document.createElement('canvas');
+  oc.width = W; oc.height = H;
+  const c = oc.getContext('2d');
+  _drawBestBuyToCtx(c);
+  _bgCache = oc;
+}
+
+function _drawBestBuyToCtx(ctx) {
+  // Back wall — Best Buy blue
+  ctx.fillStyle='#001a60';
+  ctx.fillRect(0, 0, W, H-120);
+
+  // Wall panel strips
+  for(let x=0; x<W; x+=80) {
+    ctx.fillStyle = (x/80)%2===0 ? '#001850' : '#001a60';
+    ctx.fillRect(x, 0, 80, H-120);
+    ctx.fillStyle='#000e30';
+    ctx.fillRect(x, 0, 2, H-120);
+  }
+
+  // ── FLUORESCENT CEILING LIGHTS ──
+  [100, 300, 500, 700].forEach(lx => {
+    // Fixture housing
+    ctx.fillStyle='#808888'; ctx.fillRect(lx-40, 0, 80, 8);
+    ctx.fillStyle='#606868'; ctx.fillRect(lx-40, 8, 80, 4);
+    // Tube glow
+    ctx.fillStyle='#f0f8ff'; ctx.fillRect(lx-36, 2, 72, 5);
+    ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle='#c0d8ff';
+    ctx.beginPath(); ctx.moveTo(lx,10); ctx.lineTo(lx-80,H-120); ctx.lineTo(lx+80,H-120); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1; ctx.restore();
+  });
+
+  // ── BEST BUY LOGO SIGN (center wall) ──
+  ctx.fillStyle='#ffe000';
+  ctx.fillRect(300, 18, 200, 60);
+  ctx.fillStyle='#001a60';
+  ctx.fillRect(304, 22, 192, 52);
+  ctx.save();
+  ctx.shadowColor='#ffe000'; ctx.shadowBlur=10;
+  ctx.fillStyle='#ffe000';
+  ctx.font='bold 18px "Press Start 2P", monospace';
+  ctx.textAlign='center';
+  ctx.fillText('BEST BUY', 400, 55);
+  ctx.fillStyle='#ffffff';
+  ctx.font='8px "Press Start 2P", monospace';
+  ctx.fillText('GEEK SQUAD', 400, 70);
+  ctx.restore();
+  ctx.textAlign='left';
+
+  // ── TV DISPLAY SHELVES (left and right walls) ──
+  // Left shelf
+  ctx.fillStyle='#1a1a2a'; ctx.fillRect(10, 90, 180, 12);
+  ctx.fillStyle='#2a2a3a'; ctx.fillRect(10, 90, 180, 3);
+  // TVs on left shelf
+  [[20, 50],[80, 45],[140, 55]].forEach(([tx, th]) => {
+    const ty = 90 - th;
+    ctx.fillStyle='#0a0a0a'; ctx.fillRect(tx, ty, 50, th);
+    ctx.fillStyle='#111428'; ctx.fillRect(tx+3, ty+3, 44, th-8);
+    // Screen content — static/blue
+    ctx.fillStyle='#0040a0'; ctx.fillRect(tx+4, ty+4, 42, th-10);
+    ctx.fillStyle='#0060d0'; ctx.fillRect(tx+6, ty+6, 10, 6);
+    ctx.fillStyle='#ffe000'; ctx.fillRect(tx+20, ty+8, 18, 3);
+    // Stand
+    ctx.fillStyle='#333'; ctx.fillRect(tx+20, 90, 10, 4);
+    ctx.fillStyle='#444'; ctx.fillRect(tx+15, 92, 20, 3);
+  });
+
+  // Right shelf
+  ctx.fillStyle='#1a1a2a'; ctx.fillRect(610, 90, 180, 12);
+  ctx.fillStyle='#2a2a3a'; ctx.fillRect(610, 90, 180, 3);
+  // TVs on right shelf
+  [[620, 48],[680, 52],[740, 46]].forEach(([tx, th]) => {
+    const ty = 90 - th;
+    ctx.fillStyle='#0a0a0a'; ctx.fillRect(tx, ty, 50, th);
+    ctx.fillStyle='#111428'; ctx.fillRect(tx+3, ty+3, 44, th-8);
+    ctx.fillStyle='#0050b0'; ctx.fillRect(tx+4, ty+4, 42, th-10);
+    ctx.fillStyle='#ffe000'; ctx.fillRect(tx+8, ty+10, 16, 3);
+    ctx.fillStyle='#333'; ctx.fillRect(tx+20, 90, 10, 4);
+    ctx.fillStyle='#444'; ctx.fillRect(tx+15, 92, 20, 3);
+  });
+
+  // ── LOWER SHELF with laptops ──
+  ctx.fillStyle='#1a1a2a'; ctx.fillRect(10, 200, 180, 10);
+  [[20, 195],[80, 195],[140, 195]].forEach(([lx, ly]) => {
+    // Laptop base
+    ctx.fillStyle='#888'; ctx.fillRect(lx, ly, 40, 5);
+    // Laptop screen
+    ctx.fillStyle='#333'; ctx.fillRect(lx+2, ly-28, 36, 28);
+    ctx.fillStyle='#0050b0'; ctx.fillRect(lx+4, ly-26, 32, 24);
+    ctx.fillStyle='#ffe000'; ctx.fillRect(lx+10, ly-18, 20, 2);
+  });
+
+  // Right lower shelf with laptops
+  ctx.fillStyle='#1a1a2a'; ctx.fillRect(610, 200, 180, 10);
+  [[620, 195],[680, 195],[740, 195]].forEach(([lx, ly]) => {
+    ctx.fillStyle='#888'; ctx.fillRect(lx, ly, 40, 5);
+    ctx.fillStyle='#333'; ctx.fillRect(lx+2, ly-28, 36, 28);
+    ctx.fillStyle='#0060c0'; ctx.fillRect(lx+4, ly-26, 32, 24);
+    ctx.fillStyle='#ffe000'; ctx.fillRect(lx+10, ly-18, 20, 2);
+  });
+
+  // ── PRICE TAGS (yellow) ──
+  [[30,105],[90,105],[150,105],[630,105],[690,105],[750,105]].forEach(([tx,ty],i) => {
+    ctx.fillStyle='#ffe000'; ctx.fillRect(tx, ty, 28, 14);
+    ctx.fillStyle='#001050'; ctx.fillRect(tx+2, ty+2, 24, 10);
+    ctx.fillStyle='#ffe000';
+    ctx.font='6px "Press Start 2P", monospace';
+    ctx.fillText('$'+_prices[i], tx+3, ty+10);
+  });
+
+  // ── GEEK SQUAD COUNTER ──
+  // Counter top — black with orange trim
+  ctx.fillStyle='#1a1a1a';
+  ctx.fillRect(200, H-130, 400, 12);
+  ctx.fillStyle='#ff6600';
+  ctx.fillRect(200, H-130, 400, 3);
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(200, H-122, 400, 4);
+  // Counter front — dark with Geek Squad branding
+  ctx.fillStyle='#1a1a1a';
+  ctx.fillRect(200, H-118, 400, 118);
+  ctx.fillStyle='#222'; ctx.fillRect(200, H-118, 400, 4);
+  // Vertical panels on counter front
+  ctx.fillStyle='rgba(255,102,0,0.15)';
+  for(let x=200; x<600; x+=50) ctx.fillRect(x, H-116, 2, 116);
+  // Orange stripe
+  ctx.fillStyle='#ff6600';
+  ctx.fillRect(200, H-70, 400, 4);
+  // Geek Squad text on counter
+  ctx.save();
+  ctx.fillStyle='#ff6600';
+  ctx.font='10px "Press Start 2P", monospace';
+  ctx.textAlign='center';
+  ctx.fillText('GEEK SQUAD', 400, H-48);
+  ctx.restore();
+  ctx.textAlign='left';
+
+  // ── LAPTOP ON COUNTER (being repaired) ──
+  const lpx = 370, lpy = H-132;
+  ctx.fillStyle='#666'; ctx.fillRect(lpx, lpy, 60, 5); // base
+  ctx.fillStyle='#444'; ctx.fillRect(lpx+4, lpy-36, 52, 36); // screen back
+  ctx.fillStyle='#0060d0'; ctx.fillRect(lpx+6, lpy-34, 48, 32); // screen
+  ctx.fillStyle='#ffe000'; ctx.fillRect(lpx+14, lpy-24, 32, 3); // text on screen
+  ctx.fillStyle='#fff'; ctx.fillRect(lpx+14, lpy-18, 24, 2);
+  ctx.fillStyle='#fff'; ctx.fillRect(lpx+14, lpy-14, 28, 2);
+
+  // ── FLOOR — grey tile ──
+  ctx.fillStyle='#404850';
+  ctx.fillRect(0, H-46, W, 46);
+  ctx.fillStyle='#384048';
+  for(let x=0; x<W; x+=40) ctx.fillRect(x, H-46, 1, 46);
+  for(let y=H-46; y<H; y+=20) ctx.fillRect(0, y, W, 1);
+  ctx.fillStyle='#485058'; ctx.fillRect(0, H-46, W, 2);
+
+  // ── SALIVA PUDDLE on floor ──
+  const px0 = 340, py0 = H-44;
+  ctx.fillStyle='#1060a0';
+  ctx.fillRect(px0-30, py0, 60, 4);
+  ctx.fillRect(px0-22, py0+3, 44, 3);
+  ctx.fillStyle='#40a8e0';
+  ctx.fillRect(px0-24, py0, 48, 3);
+  ctx.fillRect(px0-16, py0+2, 32, 3);
+  ctx.fillStyle='#80d0f8';
+  ctx.fillRect(px0-18, py0, 14, 2);
+  ctx.fillRect(px0+6, py0+2, 8, 1);
+}
+
+function drawBestBuy() {
+  ensureBgCache();
+  ctx.drawImage(_bgCache, 0, 0);
+}
+
+// ==================== RACCOON TECH (behind counter) ====================
+function drawTech(cx, cy, mouthOpen, typing) {
+  const P = S;
+
+  // ── BODY — dark grey with Geek Squad black polo ──
+  px(ctx,'#1a1a1a', cx, cy-26, 18, 24); // black polo
+  px(ctx,'#222', cx+1, cy-25, 6, 20);
+  px(ctx,'#111', cx+13, cy-25, 4, 20);
+  // Orange Geek Squad badge
+  px(ctx,'#ff6600', cx+6, cy-22, 6, 4);
+  px(ctx,'#ffe000', cx+7, cy-21, 4, 2);
+  // Collar
+  px(ctx,'#2a2a2a', cx+3, cy-27, 12, 3);
+  // Body outline
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect(cx*P, (cy-27)*P, 18*P, P);
+  ctx.fillRect((cx-1)*P, (cy-26)*P, P, 26*P);
+  ctx.fillRect((cx+18)*P, (cy-26)*P, P, 26*P);
+  ctx.fillRect(cx*P, (cy-1)*P, 18*P, P);
+
+  // ── ARMS ──
+  if(typing) {
+    // Arms forward on counter, typing pose
+    px(ctx,'#606060', cx-5, cy-14, 6, 6);
+    px(ctx,'#505050', cx-7, cy-10, 6, 4);
+    px(ctx,'#606060', cx+17, cy-14, 6, 6);
+    px(ctx,'#505050', cx+19, cy-10, 6, 4);
+  } else {
+    px(ctx,'#606060', cx-5, cy-18, 5, 8);
+    px(ctx,'#505050', cx-7, cy-12, 5, 5);
+    px(ctx,'#606060', cx+18, cy-18, 5, 8);
+    px(ctx,'#505050', cx+20, cy-12, 5, 5);
+  }
+
+  // ── HEAD — raccoon: grey with black mask ──
+  // Head main — grey
+  px(ctx,'#808080', cx+1, cy-42, 16, 14);
+  px(ctx,'#909090', cx+2, cy-41, 6, 8);
+  px(ctx,'#707070', cx+13, cy-41, 3, 8);
+  px(ctx,'#999', cx, cy-44, 18, 4);
+  px(ctx,'#808080', cx+2, cy-45, 14, 2);
+  // Head outline
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect(cx*P, (cy-46)*P, 18*P, P);
+  ctx.fillRect((cx-1)*P, (cy-45)*P, P, 18*P);
+  ctx.fillRect((cx+18)*P, (cy-45)*P, P, 18*P);
+  ctx.fillRect(cx*P, (cy-29)*P, 18*P, P);
+
+  // ── BLACK MASK (raccoon eye mask) ──
+  ctx.fillStyle='#1a1a1a';
+  ctx.fillRect((cx)*P, (cy-42)*P, 18*P, 6*P);
+  // Mask highlight
+  ctx.fillStyle='#2a2a2a';
+  ctx.fillRect((cx+1)*P, (cy-41)*P, 6*P, 2*P);
+
+  // ── EYES (white inside mask) ──
+  px(ctx,'#f0eedd', cx+2, cy-42, 5, 5);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+2)*P, (cy-43)*P, 5*P, P);
+  ctx.fillRect((cx+1)*P, (cy-42)*P, P, 5*P);
+  ctx.fillRect((cx+7)*P, (cy-42)*P, P, 5*P);
+  ctx.fillRect((cx+2)*P, (cy-38)*P, 5*P, P);
+  px(ctx,'#0a0808', cx+3, cy-41, 3, 3);
+  px(ctx,'#ffffff', cx+3, cy-41, 1, 1);
+
+  px(ctx,'#f0eedd', cx+11, cy-42, 5, 5);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+11)*P, (cy-43)*P, 5*P, P);
+  ctx.fillRect((cx+10)*P, (cy-42)*P, P, 5*P);
+  ctx.fillRect((cx+16)*P, (cy-42)*P, P, 5*P);
+  ctx.fillRect((cx+11)*P, (cy-38)*P, 5*P, P);
+  px(ctx,'#0a0808', cx+12, cy-41, 3, 3);
+  px(ctx,'#ffffff', cx+12, cy-41, 1, 1);
+
+  // ── SNOUT — lighter grey, pointy ──
+  px(ctx,'#a0a0a0', cx+4, cy-36, 10, 6);
+  px(ctx,'#b0b0b0', cx+5, cy-35, 4, 3);
+  // Nose
+  px(ctx,'#1a1a1a', cx+7, cy-36, 4, 3);
+  px(ctx,'#333', cx+8, cy-35, 2, 1);
+  // Snout outline
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+3)*P, (cy-37)*P, 12*P, P);
+  ctx.fillRect((cx+3)*P, (cy-36)*P, P, 7*P);
+  ctx.fillRect((cx+14)*P, (cy-36)*P, P, 7*P);
+
+  // ── MOUTH ──
+  if(mouthOpen) {
+    px(ctx,'#0a0808', cx+5, cy-30, 8, P);
+    px(ctx,'#2a0808', cx+6, cy-29, 6, 3);
+    px(ctx,'#f0f0e0', cx+6, cy-29, 2, 2);
+    px(ctx,'#f0f0e0', cx+10,cy-29, 2, 2);
+  } else {
+    px(ctx,'#0a0808', cx+5, cy-30, 8, P);
+  }
+
+  // ── EARS — pointy grey with pink inside ──
+  px(ctx,'#808080', cx, cy-48, 5, 5);
+  px(ctx,'#d08888', cx+1, cy-47, 3, 3);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect(cx*P, (cy-49)*P, 5*P, P);
+  ctx.fillRect((cx-1)*P, (cy-48)*P, P, 6*P);
+  ctx.fillRect((cx+5)*P, (cy-48)*P, P, 4*P);
+
+  px(ctx,'#808080', cx+13, cy-48, 5, 5);
+  px(ctx,'#d08888', cx+14, cy-47, 3, 3);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+13)*P, (cy-49)*P, 5*P, P);
+  ctx.fillRect((cx+12)*P, (cy-48)*P, P, 6*P);
+  ctx.fillRect((cx+18)*P, (cy-48)*P, P, 4*P);
+
+  // ── RINGED TAIL (behind, sticking up) ──
+  px(ctx,'#808080', cx+16, cy-30, 6, 14);
+  px(ctx,'#1a1a1a', cx+16, cy-28, 6, 3);
+  px(ctx,'#1a1a1a', cx+16, cy-22, 6, 3);
+  px(ctx,'#808080', cx+17, cy-34, 4, 6);
+  px(ctx,'#1a1a1a', cx+17, cy-32, 4, 2);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+15)*P, (cy-30)*P, P, 15*P);
+  ctx.fillRect((cx+22)*P, (cy-30)*P, P, 15*P);
+  ctx.fillRect((cx+16)*P, (cy-35)*P, P, 7*P);
+  ctx.fillRect((cx+21)*P, (cy-35)*P, P, 7*P);
+  ctx.fillRect((cx+17)*P, (cy-35)*P, 4*P, P);
+}
+
+// ==================== LICKALOTAPUS (seated, facing counter) ====================
+function drawLickBB(cx, cy, mouthOpen, winking, tongueOut) {
+  const P = S;
+
+  // ── FLAT BEAVER TAIL ──
+  ctx.fillStyle='#2a1a08';
+  ctx.fillRect((cx-2)*P, (cy+2)*P, 18*P, 8*P);
+  ctx.fillStyle='#3a2810';
+  ctx.fillRect((cx-1)*P, (cy+3)*P, 6*P, 5*P);
+  ctx.fillStyle='#1a1008';
+  ctx.fillRect((cx+10)*P, (cy+3)*P, 5*P, 5*P);
+  ctx.fillStyle='#1a1008';
+  for(let tx=cx-1; tx<cx+14; tx+=4)
+    for(let ty=cy+2; ty<cy+9; ty+=3)
+      ctx.fillRect(tx*P+1, ty*P+1, P*3-1, P*2-1);
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.fillRect((cx)*P, (cy+2)*P, 6*P, 2*P);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx-3)*P, (cy+2)*P, 20*P, P);
+  ctx.fillRect((cx-3)*P, (cy+10)*P, 20*P, P);
+  ctx.fillRect((cx-3)*P, (cy+2)*P, P, 9*P);
+  ctx.fillRect((cx+16)*P, (cy+2)*P, P, 9*P);
+
+  // ── BODY ──
+  px(ctx,'#3a2818', cx-2, cy-28, 22, 26);
+  px(ctx,'#3a2818', cx-1, cy-30, 20, 4);
+  px(ctx,'#3a2818', cx+1, cy-31, 16, 2);
+  px(ctx,'#3a2818', cx-1, cy+2,  20, 2);
+  px(ctx,'#4a3820', cx-1, cy-27, 7, 24);
+  px(ctx,'#2a1e10', cx+13, cy-27, 6, 24);
+  px(ctx,'#a08060', cx+2, cy-22, 14, 18);
+  px(ctx,'#b89070', cx+3, cy-21, 6, 8);
+  px(ctx,'#906040', cx+12, cy-18, 4, 12);
+  px(ctx,'#c0a080', cx+3, cy-20, 4, 4);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx-3)*P, (cy-28)*P, 24*P, P);
+  ctx.fillRect((cx-3)*P, (cy+2)*P, 24*P, P);
+  ctx.fillRect((cx-3)*P, (cy-28)*P, P, 32*P);
+  ctx.fillRect((cx+20)*P, (cy-28)*P, P, 32*P);
+  ctx.fillRect((cx-2)*P, (cy-29)*P, 20*P, P);
+  ctx.fillRect((cx-1)*P, (cy-30)*P, 18*P, P);
+
+  // ── ARMS ──
+  px(ctx,'#2a1e10', cx-6, cy-18, 6, 8);
+  px(ctx,'#1a0e08', cx-8, cy-14, 6, 6);
+  px(ctx,'#2a1e10', cx+18, cy-18, 6, 8);
+  px(ctx,'#1a0e08', cx+20, cy-14, 6, 6);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx-9)*P, (cy-15)*P, P, 8*P);
+  ctx.fillRect((cx-3)*P, (cy-15)*P, P, 8*P);
+  ctx.fillRect((cx+20)*P, (cy-15)*P, P, 8*P);
+  ctx.fillRect((cx+26)*P, (cy-15)*P, P, 8*P);
+
+  // ── HEAD ──
+  px(ctx,'#3a2818', cx+1, cy-44, 16, 16);
+  px(ctx,'#3a2818', cx,   cy-46, 18, 4);
+  px(ctx,'#3a2818', cx+2, cy-47, 14, 2);
+  px(ctx,'#3a2818', cx,   cy-29, 18, 2);
+  px(ctx,'#4a3820', cx+1, cy-43, 6, 10);
+  px(ctx,'#2a1e10', cx+12,cy-43, 4, 10);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect(cx*P, (cy-48)*P, 18*P, P);
+  ctx.fillRect((cx-1)*P, (cy-47)*P, 20*P, P);
+  ctx.fillRect((cx-1)*P, (cy-46)*P, P, 18*P);
+  ctx.fillRect((cx+18)*P, (cy-46)*P, P, 18*P);
+  ctx.fillRect((cx)*P, (cy-29)*P, 18*P, P);
+
+  // ── SNOUT ──
+  px(ctx,'#1a1008', cx+3,  cy-34, 12, 8);
+  px(ctx,'#2a2010', cx+4,  cy-33, 5, 4);
+  px(ctx,'#0a0808', cx+3,  cy-35, 12, P);
+  px(ctx,'#0a0808', cx+2,  cy-34, P, 8);
+  px(ctx,'#0a0808', cx+15, cy-34, P, 8);
+  px(ctx,'#0a0808', cx+5,  cy-30, 2, 2);
+  px(ctx,'#0a0808', cx+11, cy-30, 2, 2);
+
+  // ── EYES ──
+  px(ctx,'#f0eedd', cx+1, cy-44, 7, 8);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+1)*P, (cy-45)*P, 7*P, P);
+  ctx.fillRect((cx)*P, (cy-44)*P, P, 8*P);
+  ctx.fillRect((cx+8)*P, (cy-44)*P, P, 8*P);
+  ctx.fillRect((cx+1)*P, (cy-37)*P, 7*P, P);
+  px(ctx,'#0a0808', cx+2, cy-43, 5, 6);
+  px(ctx,'#1a1818', cx+3, cy-42, 3, 4);
+  px(ctx,'#ffffff', cx+2, cy-43, 2, 2);
+
+  px(ctx,'#f0eedd', cx+10, cy-44, 7, 8);
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+10)*P, (cy-45)*P, 7*P, P);
+  ctx.fillRect((cx+9)*P, (cy-44)*P, P, 8*P);
+  ctx.fillRect((cx+17)*P, (cy-44)*P, P, 8*P);
+  ctx.fillRect((cx+10)*P, (cy-37)*P, 7*P, P);
+  if(winking) {
+    px(ctx,'#3a2818', cx+10, cy-44, 7, 8);
+    ctx.fillStyle='#0a0808';
+    ctx.fillRect((cx+10)*P, (cy-41)*P, 7*P, 3*P);
+  } else {
+    px(ctx,'#0a0808', cx+11, cy-43, 5, 6);
+    px(ctx,'#1a1818', cx+12, cy-42, 3, 4);
+    px(ctx,'#ffffff', cx+11, cy-43, 2, 2);
+  }
+
+  // Eyebrows
+  ctx.fillStyle='#0a0808';
+  ctx.fillRect((cx+1)*P, (cy-46)*P, 7*P, 2);
+  ctx.fillRect((cx+10)*P, (cy-46)*P, 7*P, 2);
+
+  // ── MOUTH / TEETH ──
+  if(mouthOpen || tongueOut) {
+    px(ctx,'#0a0808', cx+3, cy-27, 12, P);
+    px(ctx,'#1a0808', cx+4, cy-26, 10, 4);
+    px(ctx,'#f0f0e0', cx+5, cy-26, 4, 3);
+    px(ctx,'#f0f0e0', cx+10,cy-26, 4, 3);
+    ctx.fillStyle='#0a0808'; ctx.fillRect((cx+9)*P, (cy-26)*P, P, 3*P);
+    ctx.fillStyle='#ddd8c8'; ctx.fillRect((cx+5)*P, (cy-26)*P, P, 3*P);
+  } else {
+    px(ctx,'#0a0808', cx+3, cy-27, 12, P);
+    px(ctx,'#f0f0e0', cx+5, cy-26, 4, 2);
+    px(ctx,'#f0f0e0', cx+10,cy-26, 4, 2);
+    ctx.fillStyle='#0a0808'; ctx.fillRect((cx+9)*P, (cy-26)*P, P, 2*P);
+  }
+
+  // ── TONGUE ──
+  if(tongueOut) {
+    const tx = (cx+7)*P, ty = (cy-24)*P;
+    ctx.save(); ctx.translate(tx, ty); ctx.rotate(0.15); ctx.translate(-tx,-ty);
+    ctx.fillStyle='#d86080';
+    ctx.fillRect(tx-3*P, ty, 8*P, 14*P);
+    ctx.fillStyle='#e8809a';
+    ctx.fillRect(tx-3*P, ty, 8*P, 4*P);
+    ctx.fillRect(tx-2*P, ty+4*P, 3*P, 8*P);
+    ctx.fillStyle='#d86080';
+    ctx.fillRect(tx-5*P, ty+13*P, 12*P, 6*P);
+    ctx.fillStyle='#e8809a';
+    ctx.fillRect(tx-4*P, ty+13*P, 5*P, 3*P);
+    ctx.fillStyle='#b04060';
+    ctx.fillRect(tx-5*P, ty+18*P, 12*P, P);
+    ctx.fillStyle='#0a0808';
+    ctx.fillRect(tx-4*P, ty-P, 8*P, P);
+    ctx.fillRect(tx-4*P, ty, P, 19*P);
+    ctx.fillRect(tx+4*P, ty, P, 13*P);
+    ctx.fillRect(tx-6*P, ty+13*P, P, 6*P);
+    ctx.fillRect(tx+6*P, ty+13*P, P, 6*P);
+    ctx.fillRect(tx-5*P, ty+19*P, 12*P, P);
+    // Saliva drips
+    ctx.fillStyle='#40a8e0';
+    ctx.fillRect(tx-1*P, ty+7*P, 3*P, 2*P);
+    ctx.fillRect(tx-2*P, ty+9*P, 5*P, 4*P);
+    ctx.fillStyle='#80d0f8'; ctx.fillRect(tx-1*P, ty+9*P, 2*P, 2*P);
+    ctx.fillStyle='#40a8e0';
+    ctx.fillRect(tx+3*P, ty+5*P, 2*P, 5*P);
+    ctx.fillRect(tx+2*P, ty+10*P, 4*P, 4*P);
+    ctx.fillStyle='#40a8e0';
+    ctx.fillRect(tx-1*P, ty+19*P, 3*P, 2*P);
+    ctx.fillRect(tx-3*P, ty+21*P, 7*P, 6*P);
+    ctx.fillStyle='#80d0f8'; ctx.fillRect(tx-2*P, ty+21*P, 3*P, 2*P);
+    ctx.fillStyle='#1878b0';
+    ctx.fillRect(tx-6*P, ty+28*P, 13*P, 3*P);
+    ctx.fillStyle='#40a8e0';
+    ctx.fillRect(tx-5*P, ty+28*P, 11*P, 2*P);
+    ctx.restore();
+  }
+
+  // ── EARS ──
+  px(ctx,'#1a1a1a', cx, cy-42, 4, 5);
+  ctx.fillStyle='#0a0808'; ctx.fillRect(cx*P, (cy-43)*P, 4*P, P); ctx.fillRect(cx*P, (cy-42)*P, P, 6*P); ctx.fillRect((cx+4)*P, (cy-42)*P, P, 5*P);
+  px(ctx,'#1a1a1a', cx+14, cy-42, 4, 5);
+  ctx.fillStyle='#0a0808'; ctx.fillRect((cx+14)*P, (cy-43)*P, 4*P, P); ctx.fillRect((cx+14)*P, (cy-42)*P, P, 6*P); ctx.fillRect((cx+17)*P, (cy-42)*P, P, 5*P);
+}
+
+// ==================== DIALOGUE SYSTEM ====================
+const sbEl   = document.getElementById('speech-bubble');
+const sbSpk  = document.getElementById('sb-speaker');
+const sbTxt  = document.getElementById('sb-text');
+const sbAdv  = document.getElementById('sb-advance');
+const sbTail = document.getElementById('sb-tail');
+
+const BUBBLE_POS = {
+  tech: { left:'380px', bott:270, width:'320px', tail:'down-left', tailPos:'left:60px', color:'#ff6600' },
+  lick: { left:'100px', bott:265, width:'240px', tail:'down-right', tailPos:'right:40px', color:'#4ecb4e' },
+};
+
+const TAIL = {
+  tech: { side:'left',  px:60 },
+  lick: { side:'right', px:40 },
+};
+
+const scenes = [
+  { char:'tech', text:'my net worth peaked at $1.2 million.', mouth:true },
+  { char:'tech', text:'none of it was real.', mouth:true, action:'pause' },
+  { char:'tech', text:"i don't mean that philosophically. i mean it was located on servers that have since been turned off.", mouth:true },
+  { char:'lick', text:'...', mouth:false },
+  { char:'tech', text:'i own eleven properties in the metaverse. three in Decentraland. four in The Sandbox. two in Voxels. one in Otherside.', mouth:true },
+  { char:'tech', text:"and a beachfront villa in Horizon Worlds that i bought for $214,000 because Mark Zuckerberg called it \"the next frontier.\"", mouth:true },
+  { char:'tech', text:'the frontier closed last week.', mouth:true, action:'flash' },
+  { char:'tech', text:"it's a mobile app now.", mouth:true },
+  { char:'lick', text:'*blinks*', mouth:false },
+  { char:'tech', text:"last year i mass DM'd 340 people the phrase \"you don't understand how early we are.\" i have since stopped doing that.", mouth:true },
+  { char:'tech', text:'not because i was wrong. because most of them blocked me.', mouth:true },
+  { char:'tech', text:'i got into metaverse real estate in November 2021. everyone was buying. someone paid $450,000 to be Snoop Dogg\'s neighbor. in a video game. with no legs.', mouth:true },
+  { char:'tech', text:"the avatars didn't have legs.", mouth:true },
+  { char:'tech', text:"i thought that was bullish. \"the legs are coming,\" i told my Discord. \"legs are a roadmap item.\" three hundred people reacted with rocket emojis.", mouth:true },
+  { char:'lick', text:'wait... legs were bullish?', mouth:true },
+  { char:'tech', text:'i called myself a "digital land baron."', mouth:true },
+  { char:'tech', text:'i put it in my Twitter bio.', mouth:true },
+  { char:'tech', text:'i put it in my LinkedIn headline.', mouth:true },
+  { char:'tech', text:'i said it on a podcast that had eleven listeners. three of them were bots. the rest were my alts.', mouth:true },
+  { char:'tech', text:'my virtual property has more square footage than my actual apartment.', mouth:true },
+  { char:'tech', text:'my actual apartment has furniture.', mouth:true, action:'flash' },
+  { char:'lick', text:'...', mouth:false },
+  { char:'tech', text:'location, location, location.', mouth:true },
+  { char:'tech', text:'my most valuable asset was a plot next to a virtual Gucci store. Gucci left in 2023. the store is still there. nobody\'s in it.', mouth:true },
+  { char:'tech', text:"it's like a mall in Ohio but with worse graphics and no food court.", mouth:true },
+  { char:'lick', text:'*tongue flick*', mouth:false, action:'tongue' },
+  { char:'tech', text:'i held.', mouth:true },
+  { char:'tech', text:'diamond hands. 💎🙌', mouth:true },
+  { char:'tech', text:"that's what we said. \"diamond hands.\" it means refusing to sell while your investment loses 94% of its value.", mouth:true },
+  { char:'tech', text:'we turned financial paralysis into a personality trait.', mouth:true, action:'flash' },
+  { char:'tech', text:'a guy in my Discord paid $2.4 million for a 618-parcel estate in Decentraland. prime district. high foot traffic.', mouth:true },
+  { char:'tech', text:'i asked him what "foot traffic" meant when the platform had 38 daily active users.', mouth:true },
+  { char:'tech', text:"he said i didn't understand the technology.", mouth:true },
+  { char:'tech', text:"i didn't.", mouth:true },
+  { char:'tech', text:'i still bought more.', mouth:true },
+  { char:'lick', text:'bro.', mouth:true },
+  { char:'tech', text:'we had a DAO. a decentralized autonomous organization. that means we voted on decisions. there were nine of us.', mouth:true },
+  { char:'tech', text:"three never showed up. two voted on everything without reading it. the other four were me and my alts.", mouth:true },
+  { char:'tech', text:'we voted to "acquire strategic parcels."', mouth:true },
+  { char:'tech', text:'the vote passed unanimously.', mouth:true },
+  { char:'tech', text:'i voted four times.', mouth:true, action:'flash' },
+  { char:'lick', text:'*drools nervously*', mouth:true, action:'tongue' },
+  { char:'tech', text:'my portfolio peaked at $1.2 million. i told everyone. i made a spreadsheet. i projected 40x returns by 2025.', mouth:true },
+  { char:'tech', text:'i made a pitch deck. the pitch deck had a slide that said "WE ARE BUILDING THE DIGITAL ECONOMY."', mouth:true },
+  { char:'tech', text:'the slide had a rocket emoji. 🚀', mouth:true },
+  { char:'tech', text:'that was my entire financial model.', mouth:true, action:'flash' },
+  { char:'tech', text:'in 2023 i bought a Bored Ape for $189,000.', mouth:true },
+  { char:'tech', text:"it's worth $14,000 now.", mouth:true },
+  { char:'tech', text:"i don't talk about the Ape.", mouth:true },
+  { char:'tech', text:'i still use it as my profile picture. people ask me about it. i say "i\'m long-term bullish."', mouth:true },
+  { char:'tech', text:"long-term bullish means i can't sell it without crying in a Panera.", mouth:true, action:'flash' },
+  { char:'lick', text:'...panera?', mouth:true },
+  { char:'tech', text:'my mom asked me what a Bored Ape was.', mouth:true },
+  { char:'tech', text:'i said "digital art on the blockchain."', mouth:true },
+  { char:'tech', text:'she asked why it cost more than her car.', mouth:true },
+  { char:'tech', text:'i said "you don\'t understand Web3."', mouth:true },
+  { char:'tech', text:'she said "i understand you live in a studio apartment."', mouth:true, action:'flash' },
+  { char:'tech', text:"she's not in my Discord.", mouth:true },
+  { char:'lick', text:'*shifts uncomfortably*', mouth:false },
+  { char:'tech', text:'Justin Bieber bought one for $1.3 million.', mouth:true },
+  { char:'tech', text:"it's worth about $90,000 now.", mouth:true },
+  { char:'tech', text:'i felt better about mine after i heard that.', mouth:true },
+  { char:'tech', text:"that's community.", mouth:true },
+  { char:'tech', text:'WAGMI. We\'re All Gonna Make It. we said that every day. in the group chat. while the floor dropped. while the volume dried up. while 95% of all NFT collections went to zero.', mouth:true },
+  { char:'tech', text:"we're all gonna make it.", mouth:true },
+  { char:'tech', text:'none of us made it.', mouth:true, action:'flash' },
+  { char:'tech', text:'but we said it with conviction and a laser-eye profile picture. that counts for something.', mouth:true },
+  { char:'tech', text:"it doesn't.", mouth:true },
+  { char:'tech', text:"but we said it did. that's decentralized consensus.", mouth:true },
+  { char:'lick', text:'*long blink*', mouth:false },
+  { char:'tech', text:'Meta spent $84 billion on the metaverse.', mouth:true },
+  { char:'tech', text:'i need to say that again.', mouth:true },
+  { char:'tech', text:'$84 billion.', mouth:true, action:'flash' },
+  { char:'tech', text:'more than the GDP of Luxembourg. more than the GDP of Iceland, Luxembourg, and Malta combined.', mouth:true },
+  { char:'tech', text:"they spent it on a platform where the avatars had no legs, the graphics looked like a 2006 Wii game, and the peak user count was lower than the lunch rush at a Chipotle in Des Moines.", mouth:true },
+  { char:'tech', text:'they just pulled Horizon Worlds from VR headsets.', mouth:true },
+  { char:'tech', text:'it lives on as a mobile app.', mouth:true },
+  { char:'tech', text:'my beachfront villa is now a mobile app.', mouth:true, action:'flash' },
+  { char:'lick', text:'...', mouth:false },
+  { char:'tech', text:'location, location, location.', mouth:true },
+  { char:'tech', text:'Zuckerberg renamed the entire company for this. Facebook became Meta. a $900 billion company changed its legal name because the CEO watched Ready Player One and said "i want that."', mouth:true },
+  { char:'tech', text:'Reality Labs lost $10 billion in 2021. $14 billion in 2022. $16 billion in 2023. $18 billion in 2024. $19 billion in 2025.', mouth:true },
+  { char:'tech', text:"that's not a strategy. that's a speedrun.", mouth:true, action:'flash' },
+  { char:'tech', text:'they laid off 1,500 Reality Labs employees this year. shut down three VR studios. killed Supernatural.', mouth:true },
+  { char:'tech', text:'put the entire VR social vision in a casket and said "we\'re pivoting to AI and wearables."', mouth:true },
+  { char:'tech', text:'the pivot took four years and $84 billion.', mouth:true },
+  { char:'lick', text:'did you pivot', mouth:true },
+  { char:'tech', text:'i pivoted too.', mouth:true },
+  { char:'tech', text:"i'm an AI real estate investor now.", mouth:true },
+  { char:'lick', text:'*jaw drops*', mouth:true },
+  { char:'tech', text:"i bought a virtual plot in an AI-generated world that doesn't exist yet. the founder said it was \"the intersection of spatial computing and large language models.\"", mouth:true },
+  { char:'tech', text:"i don't know what that means.", mouth:true },
+  { char:'tech', text:'i gave him $40,000.', mouth:true, action:'flash' },
+  { char:'tech', text:"he has a whitepaper. it's 47 pages. i read the title and the tokenomics section. the tokenomics section is a pie chart.", mouth:true },
+  { char:'tech', text:'i love pie charts. they make everything look like a plan.', mouth:true },
+  { char:'tech', text:'the project has a roadmap. Q1: "Build community." Q2: "Launch beta." Q3: "Scale ecosystem." Q4 is blank.', mouth:true },
+  { char:'tech', text:'Q4 is always blank.', mouth:true },
+  { char:'tech', text:"that's where the exit scam goes.", mouth:true, action:'flash' },
+  { char:'lick', text:'*gulps*', mouth:true, action:'tongue' },
+  { char:'tech', text:'my accountant asked me to value my metaverse portfolio for tax purposes.', mouth:true },
+  { char:'tech', text:'i said $1.2 million.', mouth:true },
+  { char:'tech', text:'he said "current market value."', mouth:true },
+  { char:'tech', text:'i said $6,400.', mouth:true, action:'flash' },
+  { char:'tech', text:'he stared at me for eleven seconds.', mouth:true },
+  { char:'tech', text:'i know because i counted.', mouth:true },
+  { char:'tech', text:'he asked if i had any other investments.', mouth:true },
+  { char:'tech', text:'i showed him my NFTs.', mouth:true },
+  { char:'tech', text:'he stared for longer.', mouth:true },
+  { char:'tech', text:'i told him they were "cultural artifacts with long-term provenance."', mouth:true },
+  { char:'tech', text:"he asked if i'd considered a 401k.", mouth:true },
+  { char:'tech', text:'i told him a 401k was "legacy finance."', mouth:true },
+  { char:'tech', text:'he told me to leave his office.', mouth:true, action:'flash' },
+  { char:'lick', text:'*tongue retreats*', mouth:false },
+  { char:'tech', text:'the metaverse is dead.', mouth:true },
+  { char:'tech', text:"i don't accept that.", mouth:true },
+  { char:'tech', text:'i am a digital land baron. i own eleven properties across four platforms.', mouth:true },
+  { char:'tech', text:"i have a beachfront villa in a mobile app, a plot next to an empty Gucci store, and a cartoon monkey that cost me more than my actual car.", mouth:true },
+  { char:'tech', text:'location, location, location.', mouth:true },
+  { char:'tech', text:'the location is nowhere.', mouth:true, action:'flash' },
+  { char:'tech', text:"but i'm early.", mouth:true },
+  { char:'tech', text:"i'm always early.", mouth:true },
+  { char:'tech', text:"that's the same as being wrong except you get to say it with confidence.", mouth:true },
+  { char:'lick', text:'...so is my laptop ready or', mouth:true },
+  { char:'tech', text:"oh yeah it's been ready for an hour. that'll be $49.99.", mouth:true },
+];
+
+let sceneIdx = 0;
+let typing = false, typeTimer = null, typeChars = 0, typeFull = '';
+let canAdv = false;
+let techMouth = false, lickMouth = false;
+let lickWink = false, lickTongue = false, tongueTimer = 0;
+
+function positionBubble(pos, charKey) {
+  sbEl.style.left   = pos.left;
+  sbEl.style.top    = '';
+  sbEl.style.bottom = (pos.bott !== undefined ? pos.bott + 'px' : 'auto');
+  sbEl.style.width  = pos.width || '260px';
+  sbEl.style.borderColor = pos.color;
+  sbSpk.style.color = pos.color;
+  sbTail.style.left = ''; sbTail.style.right = ''; sbTail.style.transform = '';
+  const tailDir = pos.tail.split('-')[1];
+  sbTail.className = 'tail-down-' + tailDir;
+  sbTail.style.borderTopColor = pos.color;
+  sbTail.style.color = pos.color;
+  const t = TAIL[charKey] || { side:'center', px:0 };
+  if(t.side === 'center') {
+    sbTail.style.left = '50%'; sbTail.style.transform = 'translateX(-50%)';
+  } else if(t.side === 'right') {
+    sbTail.style.right = t.px + 'px'; sbTail.style.left = 'auto';
+  } else {
+    sbTail.style.left = t.px + 'px'; sbTail.style.right = 'auto';
+  }
+}
+
+function triggerBlueFlash() {
+  sfxBlueFlash();
+  const bf = document.getElementById('blue-flash');
+  bf.classList.add('flash');
+  setTimeout(()=>bf.classList.remove('flash'), 300);
+  setTimeout(()=>{ bf.classList.add('flash'); setTimeout(()=>bf.classList.remove('flash'),200); }, 400);
+}
+
+function showScene(idx) {
+  if(idx >= scenes.length) return;
+  const s = scenes[idx];
+  const pos = BUBBLE_POS[s.char];
+
+  techMouth = false; lickMouth = false;
+  if(s.char==='tech') techMouth = s.mouth;
+  if(s.char==='lick') lickMouth = s.mouth;
+
+  // Actions
+  if(s.action==='flash') triggerBlueFlash();
+  if(s.action==='tongue') { lickTongue = true; tongueTimer = 1.5; }
+  if(s.action==='pause') sfxSigh();
+
+  positionBubble(pos, s.char);
+  sbSpk.textContent = s.char==='lick' ? 'LICKALOTAPUS' : 'TECH';
+  sbTxt.innerHTML = '';
+  sbAdv.classList.remove('show');
+  sbEl.classList.add('show');
+  canAdv = false;
+  typeFull = s.text; typeChars = 0; typing = true;
+
+  function typeChar() {
+    if(typeChars < typeFull.length) {
+      sbTxt.innerHTML = typeFull.substring(0,typeChars+1) + '<span style="display:inline-block;width:6px;height:6px;background:#ffe000;animation:blink 0.6s infinite;vertical-align:middle;margin-left:2px;"></span>';
+      typeChars++;
+      if(typeChars%3===0) sfxTick(s.char==='lick');
+      typeTimer = setTimeout(typeChar, 35);
+    } else {
+      sbTxt.innerHTML = typeFull;
+      typing = false;
+      techMouth = false; lickMouth = false;
+      canAdv = true;
+      sbAdv.classList.add('show');
+    }
+  }
+  typeChar();
+}
+
+function advance() {
+  if(typing) {
+    clearTimeout(typeTimer);
+    typing = false;
+    sbTxt.innerHTML = typeFull;
+    techMouth = false; lickMouth = false;
+    canAdv = true;
+    sbAdv.classList.add('show');
+    return;
+  }
+  if(!canAdv) return;
+  canAdv = false;
+  sbEl.classList.remove('show');
+  sceneIdx++;
+  if(sceneIdx < scenes.length) {
+    setTimeout(() => showScene(sceneIdx), 150);
+  } else {
+    phase = 'ended';
+    setTimeout(() => {
+      stopMusic();
+      document.getElementById('end-card').classList.add('show');
+    }, 800);
+  }
+}
+
+// ==================== SALIVA DROP SYSTEM ====================
+let salivaDrops = [];
+let lastSalivaSpawn = 0;
+const SALIVA_FLOOR = H - 44;
+
+function spawnSalivaDrops() {
+  if(salivaDrops.length >= 40) return;
+  const now = performance.now();
+  if(now - lastSalivaSpawn < 200) return;
+  lastSalivaSpawn = now;
+  const S5 = S;
+  const baseX = 62 * S5;
+  const baseY = (66 - 24) * S5;
+  const angle = 0.15;
+  const drips = [ { lx: 1*S5, ly: 10*S5 }, { lx: 3*S5, ly: 8*S5 }, { lx: 0, ly: 22*S5 } ];
+  const cos = Math.cos(angle), sin = Math.sin(angle);
+  drips.forEach(d => {
+    const sx = baseX + d.lx*cos - d.ly*sin + (Math.random()-0.5)*4;
+    const sy = baseY + d.lx*sin + d.ly*cos;
+    salivaDrops.push({ x:sx, y:sy, vy:1.0+Math.random()*1.2, size:4+Math.random()*3, alpha:1.0, landed:false });
+  });
+}
+
+function updateSalivaDrops() {
+  salivaDrops = salivaDrops.filter(d => d.alpha > 0.04);
+  salivaDrops.forEach(d => {
+    if(!d.landed) {
+      d.y += d.vy; d.vy += 0.3;
+      if(d.y >= SALIVA_FLOOR) { d.landed = true; d.y = SALIVA_FLOOR; d.alpha = 0; return; }
+    }
+    fxc.save(); fxc.globalAlpha = d.alpha;
+    fxc.fillStyle = '#1060a0';
+    fxc.fillRect(d.x - d.size/2 - 1, d.y - d.size - 1, d.size+2, d.size+2);
+    fxc.fillStyle = '#40a8e0';
+    fxc.fillRect(d.x - d.size/2, d.y - d.size, d.size, d.size);
+    fxc.fillStyle = '#80d0f8';
+    fxc.fillRect(d.x - d.size/2+1, d.y - d.size+1, Math.max(1, d.size/2-1), Math.max(1, d.size/2-1));
+    fxc.fillStyle = '#40a8e0';
+    fxc.fillRect(d.x - 1, d.y - d.size*1.8, 2, d.size*0.9);
+    fxc.restore();
+  });
+}
+
+// ==================== POSITION CONFIG ====================
+const POS = {
+  lick: { cx:55, dy:16, sc:3.5, sx:220 },
+  tech: { cx:130, dy:8, sc:3.8, sx:530 },
+};
+
+// ==================== MAIN LOOP ====================
+let lastTime = 0;
+let frameCount = 0;
+let phase = 'title';
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts-lastTime)/1000, 0.05);
+  lastTime = ts;
+  frameCount++;
+
+  ctx.clearRect(0,0,W,H);
+  fxc.clearRect(0,0,W,H);
+
+  drawBestBuy();
+
+  const seatY = Math.round((H-100)/S);
+
+  // Tongue timer
+  tongueTimer -= dt;
+  if(tongueTimer <= 0 && sceneIdx > 0) {
+    if(lickTongue) {
+      lickTongue = false;
+      tongueTimer = 2.0 + Math.random()*3.0;
+    } else if(Math.random() < 0.15) {
+      lickTongue = true;
+      tongueTimer = 0.2;
+      spawnSalivaDrops();
+    } else {
+      tongueTimer = 1.0 + Math.random()*2.0;
+    }
+  }
+
+  // Draw Lickalotapus (left side, in front of counter)
+  S = POS.lick.sc;
+  drawLickBB(POS.lick.cx, seatY+POS.lick.dy, lickMouth, lickWink, lickTongue);
+  S = 4;
+
+  // Draw Tech (right side, behind counter)
+  S = POS.tech.sc;
+  drawTech(POS.tech.cx, seatY+POS.tech.dy, techMouth, false);
+  S = 4;
+
+  updateSalivaDrops();
+
+  // Ambient fluorescent flicker
+  if(frameCount % 120 === 0 && Math.random() < 0.3) {
+    fxc.save(); fxc.globalAlpha = 0.03; fxc.fillStyle = '#c0d8ff';
+    fxc.fillRect(0, 0, W, H-120);
+    fxc.restore();
+  }
+}
+
+// ==================== INPUT ====================
+function handleInput() {
+  if(phase === 'title') { dismissTitle(); return; }
+  if(phase === 'fading' || phase === 'intro' || phase === 'ended') return;
+  advance();
+}
+
+// Debounce to prevent double-firing from touch+click on mobile
+let lastInputTime = 0;
+function tryInput() {
+  const now = Date.now();
+  if(now - lastInputTime < 100) return;
+  lastInputTime = now;
+  handleInput();
+}
+
+// Keyboard — always works
+document.addEventListener('keydown', e => {
+  if(['Space','Enter','ArrowRight','KeyZ','KeyX'].includes(e.code)) {
+    e.preventDefault(); tryInput();
+  }
+});
+// Touch — primary mobile input (touchstart is most reliable)
+document.addEventListener('touchstart', e => {
+  if(e.target.tagName==='BUTTON') return;
+  e.preventDefault(); tryInput();
+}, {passive:false});
+// Click — desktop fallback
+document.addEventListener('click', e => {
+  if(e.target.tagName==='BUTTON') return;
+  tryInput();
+});
+
+// ==================== SCALE ====================
+function scaleGame() {
+  const c = document.getElementById('game-container');
+  const vw = window.visualViewport ? window.visualViewport.width  : window.innerWidth;
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  c.style.transform = 'scale(' + (Math.min(vw/808, vh/458)*0.97) + ')';
+}
+scaleGame();
+window.addEventListener('resize', scaleGame);
+window.addEventListener('orientationchange', ()=>setTimeout(scaleGame,150));
+if(window.visualViewport) window.visualViewport.addEventListener('resize', scaleGame);
+
+// ==================== START ====================
+const fadeEl = document.getElementById('fade');
+requestAnimationFrame(ts => { lastTime=ts; loop(ts); });
+
+function beginIntro() {
+  const ts = document.getElementById('title-screen');
+  ts.style.transition = 'opacity 0.5s';
+  ts.style.opacity = '0';
+  setTimeout(() => {
+    ts.classList.add('hidden');
+    fadeEl.style.transition = 'none';
+    fadeEl.style.opacity = '1';
+    setTimeout(() => {
+      fadeEl.style.transition = 'opacity 1.2s';
+      fadeEl.style.opacity = '0';
+      phase = 'intro';
+      setTimeout(() => { phase = 'playing'; showScene(0); }, 1200);
+    }, 100);
+  }, 520);
+}
+
+function dismissTitle() {
+  startMusic();
+  phase = 'fading';
+  beginIntro();
+}
+</script>
+</body>
+</html>
