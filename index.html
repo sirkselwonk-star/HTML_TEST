@@ -3402,7 +3402,10 @@ function positionTitleBar(){
     var halfH=Math.tan(40*Math.PI/360)*5.0;
     var ndcY=(panelYOffset-1.35)/halfH;
     var screenY=H*(1-(ndcY+1)/2);
-    document.getElementById('lb-title-wrap').style.top=(screenY+42+titleBarOffsetY)+'px';
+    var el=document.getElementById('lb-title-wrap');
+    var elH=el.offsetHeight||80;
+    var top=Math.min(screenY+42+titleBarOffsetY, H-elH-24);
+    el.style.top=top+'px';
 }
 function open3d(i){
     cur=i; lbOpen=true; velX=velY=0; rotX=0; rotY=0; zoom=6.0;
