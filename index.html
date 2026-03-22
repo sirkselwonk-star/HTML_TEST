@@ -157,7 +157,8 @@ select.ctrl-select:focus{border-color:var(--green)}
   }
   #lb-title-group{align-items:flex-start}
   #lb-title{text-align:left;font-size:clamp(.8rem,2.2vw,1.1rem)}
-  #lb-traits{justify-content:flex-start;max-width:none}
+  #lb-traits{flex-direction:column;flex-wrap:nowrap;gap:3px 0;max-width:180px;max-height:38vh;overflow-y:auto}
+  #lb-traits .lb-trait{white-space:normal;line-height:1.6}
   #lb-bottom-row{flex-direction:column;align-items:center;margin-top:0;gap:4px;margin-right:24px}
   #lb-counter{font-size:.65rem;text-align:right;line-height:1.5}
 }
