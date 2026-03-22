@@ -131,8 +131,8 @@ select.ctrl-select:focus{border-color:var(--green)}
   .card:active{border-color:var(--green);box-shadow:0 4px 16px rgba(74,222,128,.15)}
   .card:hover img{opacity:1}
 }
-/* Portrait mobile: NFT name at top, rarity+coin at bottom */
-@media (orientation:portrait) and (pointer:coarse){
+/* Portrait mobile + desktop: NFT name at top, rarity+coin at bottom */
+@media (orientation:portrait) and (pointer:coarse),(pointer:fine){
   #lb-title-wrap{
     top:0 !important;left:0;right:0;bottom:0;
     transform:none;
