@@ -3175,13 +3175,17 @@ var isDragging=false,prevX=0,prevY=0,velX=0,velY=0;
 var HEDERA_TOKEN='0.0.9474754';
 var MIRROR_NODE='https://mainnet-public.mirrornode.hedera.com';
 var IPFS_GW='https://ipfs.io/ipfs/';
+var SENTX_ACCT='0.0.1064038';
 var traitsCache={};
+var spenderCache={};
 function fetchTraits(serial,cb){
-  if(traitsCache[serial]!==undefined){cb(traitsCache[serial]);return;}
+  if(traitsCache[serial]!==undefined){cb(traitsCache[serial],spenderCache[serial]||null);return;}
   traitsCache[serial]=null;
+  var spender=null;
   fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
     .then(function(r){return r.json();})
     .then(function(d){
+      spender=d.spender||null;
       var uri=atob(d.metadata).replace('ipfs://',IPFS_GW);
       return fetch(uri);
     })
@@ -3189,9 +3193,10 @@ function fetchTraits(serial,cb){
     .then(function(m){
       var a=m.attributes||m.properties||[];
       traitsCache[serial]=Array.isArray(a)?a:[];
-      cb(traitsCache[serial]);
+      spenderCache[serial]=spender;
+      cb(traitsCache[serial],spender);
     })
-    .catch(function(){traitsCache[serial]=[];cb([]);});
+    .catch(function(){traitsCache[serial]=[];spenderCache[serial]=null;cb([],null);});
 }
 var rotX=0,rotY=0,zoom=6.0,lbOpen=false,cur=0,animating=false;
 var panelYOffset=0.25;
@@ -3513,28 +3518,18 @@ function updateInfo(){
     forSaleEl.style.display='none';
     var serial=parseInt((images[cur].title.match(/\d+/)||[])[0]);
     if(serial){
-        fetchTraits(serial,function(attrs){
-            if(!attrs||!attrs.length)return;
-            traitsEl.innerHTML=attrs.map(function(a){
-                return '<span class="lb-trait"><span class="lb-trait-type">'+a.trait_type+'</span> '+a.value+'</span>';
-            }).join('');
-        });
-        fetch('https://gbackend.sentx.io/nftexplorer-nft',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({source:'loadNFTViewData',ismynfts:false,friendlyurl:'0.0.9474754',serialId:serial,signingAcct:null,authToken:null})
-        })
-        .then(function(r){return r.json();})
-        .then(function(d){
-            var r=d.response;
-            if(r&&r.isAvailableForPurchase){
-                var label='FOR SALE'+(r.priceFormatted?' · '+r.priceFormatted:'');
-                forSaleEl.textContent=label;
+        fetchTraits(serial,function(attrs,spender){
+            if(attrs&&attrs.length){
+                traitsEl.innerHTML=attrs.map(function(a){
+                    return '<span class="lb-trait"><span class="lb-trait-type">'+a.trait_type+'</span> '+a.value+'</span>';
+                }).join('');
+            }
+            if(spender===SENTX_ACCT){
+                forSaleEl.textContent='FOR SALE';
                 forSaleEl.href='https://sentx.io/nft-marketplace/0.0.9474754/'+serial;
                 forSaleEl.style.display='inline-block';
             }
-        })
-        .catch(function(){});
+        });
     }
 }
 
