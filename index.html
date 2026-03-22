@@ -56,6 +56,7 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
 #lb-traits .lb-trait-type{color:var(--green3);font-weight:bold}
 #lb-bottom-row{display:flex;align-items:center;justify-content:center;margin-top:6px;gap:14px}
 #lb-counter{font-size:.7rem;font-weight:normal;color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45);letter-spacing:.15em}
+#lb-forsale{display:none;font-size:.65rem;font-weight:bold;letter-spacing:.18em;color:#000;background:#4ade80;padding:2px 8px;border-radius:3px;text-transform:uppercase;margin-top:4px;cursor:pointer;text-decoration:none}
 #coin-3d{display:block;border-radius:50%;opacity:.92}
 
 #lb-close{position:fixed;top:18px;right:22px;background:none;border:none;
@@ -1208,6 +1209,7 @@ select.ctrl-select:focus{border-color:var(--green)}
     </div>
     <div id="lb-bottom-row">
       <div id="lb-counter"></div>
+      <a id="lb-forsale" target="_blank" rel="noopener">FOR SALE</a>
       <canvas id="coin-3d" width="52" height="52"></canvas>
     </div>
   </div>
@@ -3507,6 +3509,8 @@ function updateInfo(){
     document.getElementById('lb-counter').innerHTML='RARITY :<br>'+(cur+1)+' / '+images.length;
     var traitsEl=document.getElementById('lb-traits');
     traitsEl.innerHTML='';
+    var forSaleEl=document.getElementById('lb-forsale');
+    forSaleEl.style.display='none';
     var serial=parseInt((images[cur].title.match(/\d+/)||[])[0]);
     if(serial){
         fetchTraits(serial,function(attrs){
@@ -3515,6 +3519,22 @@ function updateInfo(){
                 return '<span class="lb-trait"><span class="lb-trait-type">'+a.trait_type+'</span> '+a.value+'</span>';
             }).join('');
         });
+        fetch('https://gbackend.sentx.io/nftexplorer-nft',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({source:'loadNFTViewData',ismynfts:false,friendlyurl:'0.0.9474754',serialId:serial,signingAcct:null,authToken:null})
+        })
+        .then(function(r){return r.json();})
+        .then(function(d){
+            var r=d.response;
+            if(r&&r.isAvailableForPurchase){
+                var label='FOR SALE'+(r.priceFormatted?' · '+r.priceFormatted:'');
+                forSaleEl.textContent=label;
+                forSaleEl.href='https://sentx.io/nft-marketplace/0.0.9474754/'+serial;
+                forSaleEl.style.display='inline-block';
+            }
+        })
+        .catch(function(){});
     }
 }
 
