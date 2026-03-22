@@ -155,6 +155,10 @@ select.ctrl-select:focus{border-color:var(--green)}
   #lb-bottom-row{flex-direction:column;align-items:center;margin-top:0;gap:4px;margin-right:24px}
   #lb-counter{font-size:.65rem;text-align:right;line-height:1.5}
 }
+/* Landscape desktop: nudge text toward center and down */
+@media (orientation:landscape) and (pointer:fine){
+  #lb-title-wrap{top:55% !important;padding:0 120px}
+}
 /* Small screens (phones) */
 @media (max-width:520px){
   header{padding:28px 14px 18px}
