@@ -130,6 +130,19 @@ select.ctrl-select:focus{border-color:var(--green)}
   .card:active{border-color:var(--green);box-shadow:0 4px 16px rgba(74,222,128,.15)}
   .card:hover img{opacity:1}
 }
+/* Landscape mobile: title left, rarity right */
+@media (orientation:landscape) and (pointer:coarse){
+  #lb-title-wrap{
+    top:50% !important;left:0;right:0;
+    transform:translateY(-50%);
+    display:flex;flex-direction:row;
+    justify-content:space-between;align-items:center;
+    padding:0 66px;
+  }
+  #lb-title{text-align:left;font-size:clamp(.8rem,2.2vw,1.1rem)}
+  #lb-bottom-row{flex-direction:column;align-items:flex-end;margin-top:0;gap:4px}
+  #lb-counter{font-size:.65rem}
+}
 /* Small screens (phones) */
 @media (max-width:520px){
   header{padding:28px 14px 18px}
