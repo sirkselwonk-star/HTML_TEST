@@ -39,7 +39,8 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   opacity:0;transition:opacity .2s;text-align:center}
 .card:hover .card-label{opacity:1}
 @keyframes sale-neon{0%,100%{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 4px #4ade80) drop-shadow(0 0 10px #4ade80) drop-shadow(0 0 18px #4ade80)}50%{filter:drop-shadow(0 0 1px #d4ffd4) drop-shadow(0 0 2px #4ade80) drop-shadow(0 0 6px #4ade80)}}
-.card-sale{position:absolute;top:0;left:0;width:90px;height:90px;background:#4ade80;clip-path:polygon(0 0,100% 0,0 100%);z-index:2;pointer-events:none;animation:sale-neon 2.2s ease-in-out infinite}
+.card-sale-wrap{position:absolute;top:0;left:0;width:90px;height:90px;z-index:2;pointer-events:none;animation:sale-neon 2.2s ease-in-out infinite}
+.card-sale{position:absolute;top:0;left:0;width:90px;height:90px;background:#4ade80;clip-path:polygon(0 0,100% 0,0 100%)}
 .card-sale span{position:absolute;top:34px;left:-10px;width:80px;text-align:center;font-size:.82rem;font-weight:bold;letter-spacing:.1em;color:#000;text-transform:uppercase;transform:rotate(-45deg)}
 
 #lb3d{position:fixed;inset:0;z-index:9999;background:#010f03;
@@ -4033,12 +4034,15 @@ loadDefaults();
 /* ── Gallery for-sale badges ── */
 function markCardForSale(card){
     if(card.querySelector('.card-sale'))return;
+    var w=document.createElement('div');
+    w.className='card-sale-wrap';
     var b=document.createElement('div');
     b.className='card-sale';
     var s=document.createElement('span');
     s.textContent='FOR SALE';
     b.appendChild(s);
-    card.appendChild(b);
+    w.appendChild(b);
+    card.appendChild(w);
 }
 function checkCardForSale(card){
     var label=card.querySelector('.card-label');
