@@ -4058,11 +4058,18 @@ function confirmAndMarkForSale(card,serial){
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({source:'loadNFTViewData',ismynfts:false,friendlyurl:HEDERA_TOKEN,serialId:serial,signingAcct:null,authToken:null})
     })
-    .then(function(r){return r.json();})
+    .then(function(r){
+        if(!r.ok)throw new Error('sentx-err');
+        return r.json();
+    })
     .then(function(d){
         if(d.response&&d.response.priceFormatted)markCardForSale(card);
+        // 200 but no price = listing cancelled, don't badge
     })
-    .catch(function(){});
+    .catch(function(e){
+        // SentX API unavailable — fall back to spender check so real listings still show
+        if(e.message==='sentx-err')markCardForSale(card);
+    });
 }
 function checkCardForSale(card){
     var label=card.querySelector('.card-label');
