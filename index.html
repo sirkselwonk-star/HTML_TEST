@@ -3146,6 +3146,9 @@ miniScene.add(coinMesh);
 var isDragging=false,prevX=0,prevY=0,velX=0,velY=0;
 var rotX=0,rotY=0,zoom=6.0,lbOpen=false,cur=0,animating=false;
 var panelYOffset=0.25;
+var _panelYDefault=panelYOffset;
+var _LANDSCAPE_Y_SHIFT=-0.2; // move scene down in mobile landscape
+function syncPanelY(){panelYOffset=_panelYDefault+(isTouchDevice()&&isLandscape()?_LANDSCAPE_Y_SHIFT:0);}
 var pointOn=true,pointIntScale=1.0,el1On=true,el2On=true;
 var ambOn=true,keyOn=true,fillOn=true,rimOn=true;
 var glassOn=true,backGlassOn=true;
@@ -3308,7 +3311,7 @@ window.addEventListener('resize',function(){
     var W=window.innerWidth,H=window.innerHeight;
     renderer.setSize(W,H);
     camera.aspect=W/H; camera.updateProjectionMatrix();
-    positionTitleBar();
+    syncPanelY(); positionTitleBar();
     if(isTouchDevice()){
         if(isLandscape()&&!fsEl())tryFullscreen();
         else if(!isLandscape()&&fsEl())tryExitFullscreen();
@@ -3426,7 +3429,7 @@ function open3d(i){
     lb.style.display='flex'; document.body.style.overflow='hidden';
     var W=window.innerWidth,H=window.innerHeight;
     renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix();
-    positionTitleBar();
+    syncPanelY(); positionTitleBar();
     startGoopAnim();
     loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();}});
     setTimeout(function(){lb.classList.add('active');},10);
