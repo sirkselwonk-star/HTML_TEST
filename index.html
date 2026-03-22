@@ -4052,20 +4052,32 @@ function markCardForSale(card){
     b.appendChild(s);
     card.appendChild(b);
 }
+function confirmAndMarkForSale(card,serial){
+    fetch(SENTX_PRICE_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({source:'loadNFTViewData',ismynfts:false,friendlyurl:HEDERA_TOKEN,serialId:serial,signingAcct:null,authToken:null})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.response&&d.response.priceFormatted)markCardForSale(card);
+    })
+    .catch(function(){});
+}
 function checkCardForSale(card){
     var label=card.querySelector('.card-label');
     if(!label)return;
     var serial=parseInt((label.textContent.match(/\d+/)||[])[0]);
     if(!serial)return;
     if(spenderCache[serial]!==undefined){
-        if(spenderCache[serial]===SENTX_ACCT)markCardForSale(card);
+        if(spenderCache[serial]===SENTX_ACCT)confirmAndMarkForSale(card,serial);
         return;
     }
     fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
         .then(function(r){return r.json();})
         .then(function(d){
             spenderCache[serial]=d.spender||null;
-            if(d.spender===SENTX_ACCT)markCardForSale(card);
+            if(d.spender===SENTX_ACCT)confirmAndMarkForSale(card,serial);
         })
         .catch(function(){});
 }
