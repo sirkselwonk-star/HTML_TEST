@@ -3293,6 +3293,10 @@ window.addEventListener('resize',function(){
     renderer.setSize(W,H);
     camera.aspect=W/H; camera.updateProjectionMatrix();
     positionTitleBar();
+    if(isTouchDevice()){
+        if(isLandscape()&&!fsEl())tryFullscreen();
+        else if(!isLandscape()&&fsEl())tryExitFullscreen();
+    }
 });
 window.addEventListener('wheel',function(e){
     if(!lbOpen)return;
@@ -3373,6 +3377,21 @@ function loadNFT(index,cb){
     }else{done();}
 }
 
+/* ===== FULLSCREEN HELPERS ===== */
+function isTouchDevice(){return navigator.maxTouchPoints>0;}
+function isLandscape(){return window.innerWidth>window.innerHeight;}
+function fsEl(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+function tryFullscreen(){
+    var lb=document.getElementById('lb3d');
+    if(lb.requestFullscreen)lb.requestFullscreen();
+    else if(lb.webkitRequestFullscreen)lb.webkitRequestFullscreen();
+}
+function tryExitFullscreen(){
+    if(!fsEl())return;
+    if(document.exitFullscreen)document.exitFullscreen();
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+}
+
 /* ===== OPEN / CLOSE / NAV ===== */
 var titleBarOffsetY=-20;
 function positionTitleBar(){
@@ -3392,10 +3411,12 @@ function open3d(i){
     startGoopAnim();
     loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();}});
     setTimeout(function(){lb.classList.add('active');},10);
+    if(isTouchDevice()&&isLandscape())tryFullscreen();
 }
 function close3d(){
     lbOpen=false; animating=false;
     stopGoopAnim();
+    tryExitFullscreen();
     var lb=document.getElementById('lb3d');
     lb.classList.remove('active');
     setTimeout(function(){lb.style.display='none';},200);
