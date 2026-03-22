@@ -3191,7 +3191,13 @@ var rotX=0,rotY=0,zoom=6.0,lbOpen=false,cur=0,animating=false;
 var panelYOffset=0.25;
 var _panelYDefault=panelYOffset;
 var _LANDSCAPE_Y_SHIFT=-0.24; // move scene down in mobile landscape
-function syncPanelY(){panelYOffset=_panelYDefault+(isTouchDevice()&&isLandscape()?_LANDSCAPE_Y_SHIFT:0);}
+var _PORTRAIT_Y_SHIFT=-0.18;  // move scene down in mobile portrait
+function syncPanelY(){
+  var touch=isTouchDevice();
+  panelYOffset=_panelYDefault
+    +(touch&&isLandscape()?_LANDSCAPE_Y_SHIFT:0)
+    +(touch&&!isLandscape()?_PORTRAIT_Y_SHIFT:0);
+}
 var pointOn=true,pointIntScale=1.0,el1On=true,el2On=true;
 var ambOn=true,keyOn=true,fillOn=true,rimOn=true;
 var glassOn=true,backGlassOn=true;
