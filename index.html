@@ -125,6 +125,7 @@ select.ctrl-select:focus{border-color:var(--green)}
 /* ── Mobile optimisations ─────────────────────────────────── */
 /* Touch devices: always show card labels, skip hover effects */
 @media (hover:none),(pointer:coarse){
+  #sq-neon-hud{inset:8px}
   .card-label{opacity:1}
   .card:hover{transform:none;box-shadow:none;border-color:#122415}
   .card:active{border-color:var(--green);box-shadow:0 4px 16px rgba(74,222,128,.15)}
