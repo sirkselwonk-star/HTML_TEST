@@ -3176,6 +3176,7 @@ var HEDERA_TOKEN='0.0.9474754';
 var MIRROR_NODE='https://mainnet-public.mirrornode.hedera.com';
 var IPFS_GW='https://ipfs.io/ipfs/';
 var SENTX_ACCT='0.0.1064038';
+var SENTX_PRICE_URL='https://corsproxy.io/?https://gbackend.sentx.io/nftexplorer-nft';
 var traitsCache={};
 var spenderCache={};
 function fetchTraits(serial,cb){
@@ -3528,6 +3529,18 @@ function updateInfo(){
                 forSaleEl.textContent='FOR SALE';
                 forSaleEl.href='https://sentx.io/nft-marketplace/0.0.9474754/'+serial;
                 forSaleEl.style.display='inline-block';
+                fetch(SENTX_PRICE_URL,{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({source:'loadNFTViewData',ismynfts:false,friendlyurl:'0.0.9474754',serialId:serial,signingAcct:null,authToken:null})
+                })
+                .then(function(r){return r.json();})
+                .then(function(d){
+                    if(d.response&&d.response.priceFormatted){
+                        forSaleEl.textContent='FOR SALE · '+d.response.priceFormatted;
+                    }
+                })
+                .catch(function(){});
             }
         });
     }
