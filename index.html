@@ -3287,6 +3287,13 @@ c3d.addEventListener('touchmove',function(e){
     e.preventDefault();
 },{passive:false});
 window.addEventListener('touchend',function(){isDragging=false; _pinchDist0=null;});
+window.addEventListener('resize',function(){
+    if(!lbOpen)return;
+    var W=window.innerWidth,H=window.innerHeight;
+    renderer.setSize(W,H);
+    camera.aspect=W/H; camera.updateProjectionMatrix();
+    positionTitleBar();
+});
 window.addEventListener('wheel',function(e){
     if(!lbOpen)return;
     zoom=Math.max(2.5,Math.min(10,zoom+e.deltaY*.005)); e.preventDefault();
