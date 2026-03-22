@@ -50,6 +50,9 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   text-align:center;pointer-events:none;z-index:10001}
 #lb-title{font-size:clamp(1rem,2.6vw,1.4rem);letter-spacing:.2em;text-transform:uppercase;
   color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45)}
+#lb-traits{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 8px;margin-top:7px;max-width:340px}
+#lb-traits .lb-trait{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--green);opacity:.82;white-space:nowrap}
+#lb-traits .lb-trait-type{color:var(--green3);font-weight:bold}
 #lb-bottom-row{display:flex;align-items:center;justify-content:center;margin-top:6px;gap:14px}
 #lb-counter{font-size:.7rem;font-weight:bold;color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45);letter-spacing:.15em}
 #coin-3d{display:block;border-radius:50%;opacity:.92}
@@ -152,6 +155,7 @@ select.ctrl-select:focus{border-color:var(--green)}
     padding:0 66px;
   }
   #lb-title{text-align:left;font-size:clamp(.8rem,2.2vw,1.1rem)}
+  #lb-traits{justify-content:flex-start;max-width:none}
   #lb-bottom-row{flex-direction:column;align-items:center;margin-top:0;gap:4px;margin-right:24px}
   #lb-counter{font-size:.65rem;text-align:right;line-height:1.5}
 }
@@ -1196,6 +1200,7 @@ select.ctrl-select:focus{border-color:var(--green)}
   <button class="nav-btn" id="lb-next" onclick="nav(1)">&#8594;</button>
   <div id="lb-title-wrap">
     <div id="lb-title"></div>
+    <div id="lb-traits"></div>
     <div id="lb-bottom-row">
       <div id="lb-counter"></div>
       <canvas id="coin-3d" width="52" height="52"></canvas>
@@ -3160,6 +3165,27 @@ miniScene.add(coinMesh);
 
 /* ===== INTERACTION STATE ===== */
 var isDragging=false,prevX=0,prevY=0,velX=0,velY=0;
+var HEDERA_TOKEN='0.0.9474754';
+var MIRROR_NODE='https://mainnet-public.mirrornode.hedera.com';
+var IPFS_GW='https://ipfs.io/ipfs/';
+var traitsCache={};
+function fetchTraits(serial,cb){
+  if(traitsCache[serial]!==undefined){cb(traitsCache[serial]);return;}
+  traitsCache[serial]=null;
+  fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var uri=atob(d.metadata).replace('ipfs://',IPFS_GW);
+      return fetch(uri);
+    })
+    .then(function(r){return r.json();})
+    .then(function(m){
+      var a=m.attributes||m.properties||[];
+      traitsCache[serial]=Array.isArray(a)?a:[];
+      cb(traitsCache[serial]);
+    })
+    .catch(function(){traitsCache[serial]=[];cb([]);});
+}
 var rotX=0,rotY=0,zoom=6.0,lbOpen=false,cur=0,animating=false;
 var panelYOffset=0.25;
 var _panelYDefault=panelYOffset;
@@ -3466,8 +3492,19 @@ function nav(dir){
     loadNFT(cur,updateInfo);
 }
 function updateInfo(){
-    document.getElementById('lb-title').textContent  =images[cur].title;
+    document.getElementById('lb-title').textContent=images[cur].title;
     document.getElementById('lb-counter').innerHTML='RARITY :<br>'+(cur+1)+' / '+images.length;
+    var traitsEl=document.getElementById('lb-traits');
+    traitsEl.innerHTML='';
+    var serial=parseInt((images[cur].title.match(/\d+/)||[])[0]);
+    if(serial){
+        fetchTraits(serial,function(attrs){
+            if(!attrs||!attrs.length)return;
+            traitsEl.innerHTML=attrs.map(function(a){
+                return '<span class="lb-trait"><span class="lb-trait-type">'+a.trait_type+'</span> '+a.value+'</span>';
+            }).join('');
+        });
+    }
 }
 
 /* ===== ANIMATION LOOP ===== */
