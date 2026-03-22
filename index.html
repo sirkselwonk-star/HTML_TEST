@@ -50,8 +50,8 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   text-align:center;pointer-events:none;z-index:10001}
 #lb-title{font-size:clamp(1rem,2.6vw,1.4rem);letter-spacing:.2em;text-transform:uppercase;
   color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45)}
-#lb-traits{position:fixed;display:flex;flex-wrap:wrap;justify-content:center;gap:5px 8px;z-index:10001;pointer-events:none;
-  top:90px;left:50%;transform:translateX(-50%);max-width:320px}
+#lb-title-group{display:flex;flex-direction:column;align-items:center}
+#lb-traits{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 8px;margin-top:6px;max-width:320px;pointer-events:none}
 #lb-traits .lb-trait{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--green);opacity:.82;white-space:nowrap}
 #lb-traits .lb-trait-type{color:var(--green3);font-weight:bold}
 #lb-bottom-row{display:flex;align-items:center;justify-content:center;margin-top:6px;gap:14px}
@@ -155,8 +155,9 @@ select.ctrl-select:focus{border-color:var(--green)}
     justify-content:space-between;align-items:flex-start;
     padding:0 66px;
   }
+  #lb-title-group{align-items:flex-start}
   #lb-title{text-align:left;font-size:clamp(.8rem,2.2vw,1.1rem)}
-  #lb-traits{top:auto;bottom:32px;max-width:80%;transform:translateX(-50%)}
+  #lb-traits{justify-content:flex-start;max-width:none}
   #lb-bottom-row{flex-direction:column;align-items:center;margin-top:0;gap:4px;margin-right:24px}
   #lb-counter{font-size:.65rem;text-align:right;line-height:1.5}
 }
@@ -1199,9 +1200,11 @@ select.ctrl-select:focus{border-color:var(--green)}
   <button id="lb-close" onclick="close3d()">&times;</button>
   <button class="nav-btn" id="lb-prev" onclick="nav(-1)">&#8592;</button>
   <button class="nav-btn" id="lb-next" onclick="nav(1)">&#8594;</button>
-  <div id="lb-traits"></div>
   <div id="lb-title-wrap">
-    <div id="lb-title"></div>
+    <div id="lb-title-group">
+      <div id="lb-title"></div>
+      <div id="lb-traits"></div>
+    </div>
     <div id="lb-bottom-row">
       <div id="lb-counter"></div>
       <canvas id="coin-3d" width="52" height="52"></canvas>
