@@ -38,7 +38,8 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   background:linear-gradient(0deg,rgba(0,0,0,.9) 0%,transparent 100%);
   opacity:0;transition:opacity .2s;text-align:center}
 .card:hover .card-label{opacity:1}
-.card-sale{position:absolute;top:18px;left:-26px;width:96px;padding:5px 0;font-size:.6rem;font-weight:bold;letter-spacing:.15em;color:#000;background:#4ade80;text-align:center;text-transform:uppercase;transform:rotate(-45deg);z-index:2;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.card-sale{position:absolute;top:0;left:0;width:90px;height:90px;background:#4ade80;clip-path:polygon(0 0,100% 0,0 100%);z-index:2;pointer-events:none}
+.card-sale span{position:absolute;top:16px;left:-18px;width:80px;text-align:center;font-size:.55rem;font-weight:bold;letter-spacing:.1em;color:#000;text-transform:uppercase;transform:rotate(-45deg)}
 
 #lb3d{position:fixed;inset:0;z-index:9999;background:#010f03;
   display:none;flex-direction:column;align-items:center;justify-content:center}
@@ -4046,7 +4047,9 @@ function markCardForSale(card){
     if(card.querySelector('.card-sale'))return;
     var b=document.createElement('div');
     b.className='card-sale';
-    b.textContent='FOR SALE';
+    var s=document.createElement('span');
+    s.textContent='FOR SALE';
+    b.appendChild(s);
     card.appendChild(b);
 }
 function checkCardForSale(card){
