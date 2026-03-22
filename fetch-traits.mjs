@@ -1,15 +1,18 @@
 /**
- * Fetches traits for all 1000 NFTs and writes traits-data.js
+ * Fetches traits for all 1000 NFTs and injects them inline into index.html
  * Usage: node fetch-traits.mjs
  */
 
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 
 const MIRROR_NODE = 'https://mainnet-public.mirrornode.hedera.com';
 const IPFS_GW     = 'https://ipfs.io/ipfs/';
 const TOKEN       = '0.0.9474754';
 const TOTAL       = 1000;
-const CONCURRENCY = 10; // parallel requests at a time
+const CONCURRENCY = 10;
+
+const MARKER_START = '<!-- TRAITS_DATA_START -->';
+const MARKER_END   = '<!-- TRAITS_DATA_END -->';
 
 async function fetchWithRetry(url, retries = 4, delay = 2000) {
   for (let i = 0; i <= retries; i++) {
@@ -49,9 +52,19 @@ async function run() {
     console.log(`${i + batch.length} / ${TOTAL}`);
   }
 
-  const js = `var TRAITS_DATA=${JSON.stringify(result)};`;
-  writeFileSync('traits-data.js', js);
-  console.log('Done → traits-data.js');
+  const block = `${MARKER_START}\n<script>var TRAITS_DATA=${JSON.stringify(result)};<\/script>\n${MARKER_END}`;
+
+  let html = readFileSync('index.html', 'utf8');
+
+  // Replace existing block if present, otherwise replace the external script tag
+  if (html.includes(MARKER_START)) {
+    html = html.replace(new RegExp(`${MARKER_START}[\\s\\S]*?${MARKER_END}`), block);
+  } else {
+    html = html.replace('<script src="traits-data.js"></script>', block);
+  }
+
+  writeFileSync('index.html', html);
+  console.log('Done → traits inlined into index.html');
 }
 
 run();
