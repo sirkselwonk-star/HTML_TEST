@@ -140,10 +140,11 @@ select.ctrl-select:focus{border-color:var(--green)}
     top:0 !important;left:0;right:0;bottom:0;
     transform:none;
     display:flex;flex-direction:column;
-    justify-content:space-between;align-items:center;
+    justify-content:flex-start;align-items:center;
     padding:60px 0 55px;
   }
-  #lb-bottom-row{flex-direction:column;align-items:center;gap:6px}
+  #lb-traits{margin-top:6px}
+  #lb-bottom-row{flex-direction:column;align-items:center;gap:6px;margin-top:auto}
 }
 /* Landscape mobile + desktop: title left, rarity right */
 @media (orientation:landscape) and (pointer:coarse),(orientation:landscape) and (pointer:fine){
