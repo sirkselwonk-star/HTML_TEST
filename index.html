@@ -38,6 +38,7 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   background:linear-gradient(0deg,rgba(0,0,0,.9) 0%,transparent 100%);
   opacity:0;transition:opacity .2s;text-align:center}
 .card:hover .card-label{opacity:1}
+.card-sale{position:absolute;top:6px;right:6px;font-size:.5rem;font-weight:bold;letter-spacing:.15em;color:#000;background:#4ade80;padding:2px 6px;border-radius:3px;text-transform:uppercase;z-index:2;pointer-events:none}
 
 #lb3d{position:fixed;inset:0;z-index:9999;background:#010f03;
   display:none;flex-direction:column;align-items:center;justify-content:center}
@@ -4039,6 +4040,40 @@ document.querySelectorAll('#ctrl-body input[type=range]').forEach(function(el){
 loadDefaults();
 /* Always start with goop off regardless of saved state */
 (function(){var el=document.getElementById('goop-on');if(el.checked){el.checked=false;el.dispatchEvent(new Event('change'));}})();
+
+/* ── Gallery for-sale badges ── */
+function markCardForSale(card){
+    if(card.querySelector('.card-sale'))return;
+    var b=document.createElement('div');
+    b.className='card-sale';
+    b.textContent='FOR SALE';
+    card.appendChild(b);
+}
+function checkCardForSale(card){
+    var label=card.querySelector('.card-label');
+    if(!label)return;
+    var serial=parseInt((label.textContent.match(/\d+/)||[])[0]);
+    if(!serial)return;
+    if(spenderCache[serial]!==undefined){
+        if(spenderCache[serial]===SENTX_ACCT)markCardForSale(card);
+        return;
+    }
+    fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
+        .then(function(r){return r.json();})
+        .then(function(d){
+            spenderCache[serial]=d.spender||null;
+            if(d.spender===SENTX_ACCT)markCardForSale(card);
+        })
+        .catch(function(){});
+}
+(function(){
+    var cards=document.querySelectorAll('.card');
+    if(!('IntersectionObserver' in window)){cards.forEach(checkCardForSale);return;}
+    var obs=new IntersectionObserver(function(entries){
+        entries.forEach(function(e){if(e.isIntersecting){obs.unobserve(e.target);checkCardForSale(e.target);}});
+    },{rootMargin:'200px'});
+    cards.forEach(function(c){obs.observe(c);});
+})();
 switchFrame(parseInt(document.getElementById('frame-sel').value)||0);
 
 /* ── Video Export ── */
