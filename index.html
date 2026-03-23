@@ -1221,8 +1221,10 @@ select.ctrl-select:focus{border-color:var(--green)}
   <div id="ctrl-panel">
     <button id="ctrl-toggle">&#9881; CONTROLS</button>
     <div id="ctrl-body">
+      <div style="opacity:0.35;pointer-events:none;">
       <button id="save-defaults" style="width:100%;margin:0 0 4px;padding:5px 0;background:transparent;border:1px solid #1a3d1e;color:#4ade80;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;border-radius:3px;font-family:inherit;">SAVE AS DEFAULTS</button>
       <button id="reset-baseline" style="width:100%;margin:0 0 6px;padding:5px 0;background:transparent;border:1px solid #1a3d1e;color:#86efac;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;border-radius:3px;font-family:inherit;">RESET TO BASELINE</button>
+      </div>
       <div style="background:#040f05;border:1px solid #1a3d1e;border-radius:3px;padding:6px 7px 5px;margin-bottom:4px;">
         <div style="font-size:.52rem;color:#4ade80;letter-spacing:.22em;text-transform:uppercase;margin-bottom:6px;">Export Settings</div>
         <div style="font-size:.5rem;color:#2d5c32;letter-spacing:.15em;text-transform:uppercase;margin-bottom:3px;">GIF</div>
@@ -1322,6 +1324,7 @@ select.ctrl-select:focus{border-color:var(--green)}
       <div style="font-size:.5rem;color:#2d5c32;letter-spacing:.15em;text-transform:uppercase;margin-bottom:3px;opacity:0.35;">Batch &middot; All NFTs</div>
       <button id="batch-gif" disabled style="width:100%;margin:0 0 4px;padding:5px 0;background:transparent;border:1px solid #1a3d1e;color:#86efac;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;cursor:not-allowed;border-radius:3px;font-family:inherit;opacity:0.35;">BATCH ALL &middot; GIF</button>
       <button id="batch-mp4" disabled style="width:100%;margin:0 0 10px;padding:5px 0;background:transparent;border:1px solid #1a3d1e;color:#86efac;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;cursor:not-allowed;border-radius:3px;font-family:inherit;opacity:0.35;">BATCH ALL &middot; MP4</button>
+      <div style="opacity:0.35;pointer-events:none;">
       <div class="ctrl-group-hdr" id="pa-hdr">&#9654; Panel Art</div>
       <div class="ctrl-group collapsed" id="pa">
         <div class="ctrl-section">Surface Material</div>
@@ -1832,6 +1835,7 @@ select.ctrl-select:focus{border-color:var(--green)}
           <input type="range" id="goop-top-cnt" min="1" max="10" step="1" value="3"></div>
         <div class="ctrl-row"><span class="ctrl-label">Size</span>
           <input type="range" id="goop-top-sz" min="50" max="500" step="5" value="150"></div>
+      </div>
       </div>
     </div>
   </div>
