@@ -316,7 +316,7 @@ select.ctrl-select:focus{border-color:var(--green)}
             <option value="-1">Once</option>
           </select>
         </div>
-        <div class="ctrl-row" style="margin-bottom:6px;">
+        <div class="ctrl-row save-to-row" style="margin-bottom:6px;">
           <span class="ctrl-label">Save to</span>
           <label class="sw"><input type="checkbox" id="gif-picker"><span class="sw-track"></span><span class="sw-knob"></span></label>
           <span style="font-size:.55rem;color:#4a6b52;letter-spacing:.05em;flex:1">Pick location</span>
@@ -3210,9 +3210,23 @@ document.getElementById('export-fast-gif').addEventListener('click',startFastGif
 document.getElementById('batch-gif').addEventListener('click',function(){startBatchExport('gif');});
 document.getElementById('batch-mp4').addEventListener('click',function(){startBatchExport('mp4');});
 
+/* ── Disable "Save to" on mobile (showSaveFilePicker unavailable) ── */
+if(!window.showSaveFilePicker){
+    var stRow=document.querySelector('.save-to-row');
+    if(stRow){stRow.style.opacity='.35';stRow.style.pointerEvents='none';}
+    var gp=document.getElementById('gif-picker');
+    if(gp){gp.disabled=true;gp.checked=false;}
+}
+
 /* ── Video Export (WebM/VP9 → convert to GIF via gifski or ffmpeg) ── */
+function syncMp4ResToGif(){
+    var v=document.getElementById('gif-res').value;
+    var sel=document.getElementById('export-res');
+    for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===v){sel.selectedIndex=i;break;}}
+}
 function startVideoExport(){
     if(!window.MediaRecorder){alert('MediaRecorder not supported in this browser.');return;}
+    syncMp4ResToGif();
     var usePicker=document.getElementById('gif-picker').checked&&!!window.showSaveFilePicker;
     var _slug=((images[cur]&&images[cur].title)?images[cur].title:'slime_loop')
         .toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||'slime_loop';
@@ -3810,6 +3824,7 @@ function startConvertToGif(file){
    the standard GIF export.  Uses the same Res / Pick Location settings.
 ─────────────────────────────────────────────────────────────────────────── */
 function startFastGifExport(){
+    syncMp4ResToGif();
     var _rp=document.getElementById('gif-res').value.split('x');
     var EXPORTW=parseInt(_rp[0]),EXPORTH=parseInt(_rp[1]);
     var GIF_FPS=parseInt(document.getElementById('gif-fps').value)||20;
