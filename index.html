@@ -202,11 +202,16 @@ select.ctrl-select:focus{border-color:var(--green)}
   <div class="badge">1,000 Unique Pieces</div>
 </header>
 
+<div class="pagination" id="pg-top">
+  <button class="pg-prev" onclick="goPage(currentPage-1)">&larr; Prev</button>
+  <span class="page-info pg-info"></span>
+  <button class="pg-next" onclick="goPage(currentPage+1)">Next &rarr;</button>
+</div>
 <div class="grid" id="gallery-grid"></div>
-<div class="pagination">
-  <button id="pg-prev" onclick="goPage(currentPage-1)">&larr; Prev</button>
-  <span class="page-info" id="pg-info"></span>
-  <button id="pg-next" onclick="goPage(currentPage+1)">Next &rarr;</button>
+<div class="pagination" id="pg-bottom">
+  <button class="pg-prev" onclick="goPage(currentPage-1)">&larr; Prev</button>
+  <span class="page-info pg-info"></span>
+  <button class="pg-next" onclick="goPage(currentPage+1)">Next &rarr;</button>
 </div>
 
 
@@ -3084,9 +3089,9 @@ function renderPage(page){
         d.appendChild(lbl);
         grid.appendChild(d);
     }
-    document.getElementById('pg-info').textContent='Page '+(currentPage+1)+' / '+totalPages;
-    document.getElementById('pg-prev').disabled=(currentPage===0);
-    document.getElementById('pg-next').disabled=(currentPage===totalPages-1);
+    document.querySelectorAll('.pg-info').forEach(function(el){el.textContent='Page '+(currentPage+1)+' / '+totalPages;});
+    document.querySelectorAll('.pg-prev').forEach(function(el){el.disabled=(currentPage===0);});
+    document.querySelectorAll('.pg-next').forEach(function(el){el.disabled=(currentPage===totalPages-1);});
     checkPageForSale();
     grid.scrollIntoView({behavior:'smooth',block:'start'});
 }
