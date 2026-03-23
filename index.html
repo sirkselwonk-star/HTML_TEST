@@ -192,6 +192,16 @@ select.ctrl-select:focus{border-color:var(--green)}
 .pagination button:hover:not(:disabled){background:#163a1b;border-color:var(--green)}
 .pagination button:disabled{opacity:.35;cursor:default}
 .pagination .page-info{font-size:.78rem;color:var(--muted);letter-spacing:.12em;min-width:100px;text-align:center}
+/* ── Search ──────────────────────────────────────────────── */
+.search-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:18px 20px 0;max-width:1800px;margin:0 auto}
+.search-bar input{background:#0d2e12;color:var(--text);border:1px solid #1a3d1e;border-radius:6px;
+  padding:8px 14px;font-size:.82rem;width:180px;outline:none;transition:border-color .2s}
+.search-bar input::placeholder{color:var(--muted);opacity:.7}
+.search-bar input:focus{border-color:var(--green)}
+.search-bar button{background:#0d2e12;color:var(--green);border:1px solid #1a3d1e;border-radius:6px;
+  padding:8px 14px;font-size:.82rem;cursor:pointer;transition:background .2s,border-color .2s}
+.search-bar button:hover{background:#163a1b;border-color:var(--green)}
+.search-no-result{text-align:center;padding:40px 20px;color:var(--muted);font-size:.85rem;letter-spacing:.08em}
 </style>
 </head>
 <body>
@@ -201,6 +211,12 @@ select.ctrl-select:focus{border-color:var(--green)}
   <p>3D NFT Gallery &mdash; Limited Edition Collection</p>
   <div class="badge">1,000 Unique Pieces</div>
 </header>
+
+<div class="search-bar">
+  <input type="text" id="search-input" placeholder="Search by SLIME #" inputmode="numeric">
+  <button onclick="searchSlime()">Search</button>
+  <button onclick="clearSearch()">Clear</button>
+</div>
 
 <div class="pagination" id="pg-top">
   <button class="pg-prev" onclick="goPage(currentPage-1)">&larr; Prev</button>
@@ -3096,6 +3112,49 @@ function renderPage(page){
     grid.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function goPage(p){renderPage(p);}
+
+/* ── Search ── */
+var searchActive=false;
+function searchSlime(){
+    var q=document.getElementById('search-input').value.trim().replace(/^#/,'');
+    var num=parseInt(q);
+    if(!num&&num!==0){return;}
+    var idx=-1;
+    for(var i=0;i<images.length;i++){
+        var m=images[i].title.match(/\d+/);
+        if(m&&parseInt(m[0])===num){idx=i;break;}
+    }
+    var grid=document.getElementById('gallery-grid');
+    grid.innerHTML='';
+    searchActive=true;
+    document.querySelectorAll('.pagination').forEach(function(el){el.style.display='none';});
+    if(idx===-1){
+        grid.innerHTML='<div class="search-no-result">No SLIME #'+num+' found</div>';
+        return;
+    }
+    var d=document.createElement('div');
+    d.className='card';
+    d.setAttribute('onclick','open3d('+idx+')');
+    var img=document.createElement('img');
+    img.src=images[idx].src;
+    img.alt=images[idx].title;
+    var lbl=document.createElement('div');
+    lbl.className='card-label';
+    lbl.textContent=images[idx].title;
+    d.appendChild(img);
+    d.appendChild(lbl);
+    grid.appendChild(d);
+    checkCardForSale(d);
+}
+function clearSearch(){
+    searchActive=false;
+    document.getElementById('search-input').value='';
+    document.querySelectorAll('.pagination').forEach(function(el){el.style.display='';});
+    renderPage(currentPage);
+}
+document.getElementById('search-input').addEventListener('keydown',function(e){
+    if(e.key==='Enter')searchSlime();
+});
 
 /* ── Gallery for-sale badges ── */
 function markCardForSale(card){
