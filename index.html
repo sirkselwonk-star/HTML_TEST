@@ -717,8 +717,8 @@ select.ctrl-select:focus{border-color:var(--green)}
         <div class="ctrl-section">Orbit &middot; Right Top</div>
         <div class="ctrl-row">
           <label class="sw"><input type="checkbox" id="point-on" checked><span class="sw-track"></span><span class="sw-knob"></span></label>
-          <input type="color" id="point-col" value="#121212">
-          <input type="range" id="point-int" min="0" max="3" step="0.05" value="3">
+          <input type="color" id="point-col" value="#ffffff">
+          <input type="range" id="point-int" min="0" max="3" step="0.05" value="0.9">
         </div>
         <div class="ctrl-section">Accent 1 &middot; Left Front</div>
         <div class="ctrl-row">
@@ -2471,7 +2471,7 @@ function syncPanelY(){
     +(touch&&isLandscape()?_LANDSCAPE_Y_SHIFT:0)
     +(touch&&!isLandscape()?_PORTRAIT_Y_SHIFT:0);
 }
-var pointOn=true,pointIntScale=1.0,el1On=true,el2On=true;
+var pointOn=true,pointIntScale=0.9,el1On=true,el2On=true;
 var ambOn=true,keyOn=true,fillOn=true,rimOn=true;
 var glassOn=true,backGlassOn=true;
 var glPx=0,glPy=0,glPz=0.040,glRx=0,glRy=0,glRz=0;
