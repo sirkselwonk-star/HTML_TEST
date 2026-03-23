@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SLIME &mdash; 3D NFT Gallery</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
@@ -35,6 +38,10 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   background:linear-gradient(0deg,rgba(0,0,0,.9) 0%,transparent 100%);
   opacity:0;transition:opacity .2s;text-align:center}
 .card:hover .card-label{opacity:1}
+@keyframes sale-neon{0%,100%{filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 10px #00ff80) drop-shadow(0 0 22px #00ff80) drop-shadow(0 0 40px #00ff80)}50%{filter:drop-shadow(0 0 2px #afffcf) drop-shadow(0 0 6px #00ff80) drop-shadow(0 0 14px #00ff80)}}
+.card-sale-wrap{position:absolute;top:0;left:0;width:90px;height:90px;z-index:2;pointer-events:none;animation:sale-neon 2.2s ease-in-out infinite}
+.card-sale{position:absolute;top:0;left:0;width:90px;height:90px;background:#00ff80;clip-path:polygon(0 0,100% 0,0 100%)}
+.card-sale span{position:absolute;top:28px;left:-4px;width:80px;text-align:center;font-size:.82rem;font-weight:bold;letter-spacing:.1em;color:#000;text-transform:uppercase;transform:rotate(-45deg)}
 
 #lb3d{position:fixed;inset:0;z-index:9999;background:#010f03;
   display:none;flex-direction:column;align-items:center;justify-content:center}
@@ -47,8 +54,13 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   text-align:center;pointer-events:none;z-index:10001}
 #lb-title{font-size:clamp(1rem,2.6vw,1.4rem);letter-spacing:.2em;text-transform:uppercase;
   color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45)}
+#lb-title-group{display:flex;flex-direction:column;align-items:center}
+#lb-traits{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 8px;margin-top:6px;max-width:320px;pointer-events:none}
+#lb-traits .lb-trait{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--green);opacity:.82;white-space:nowrap}
+#lb-traits .lb-trait-type{color:var(--green3);font-weight:bold}
 #lb-bottom-row{display:flex;align-items:center;justify-content:center;margin-top:6px;gap:14px}
-#lb-counter{font-size:.7rem;font-weight:bold;color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45);letter-spacing:.15em}
+#lb-counter{font-size:.7rem;font-weight:normal;color:var(--green2);text-shadow:0 0 20px rgba(134,239,172,.45);letter-spacing:.15em}
+#lb-forsale{display:none;font-size:.65rem;font-weight:bold;letter-spacing:.18em;color:#000;background:#4ade80;padding:2px 8px;border-radius:3px;text-transform:uppercase;margin-top:4px;cursor:pointer;text-decoration:none;pointer-events:auto}
 #coin-3d{display:block;border-radius:50%;opacity:.92}
 
 #lb-close{position:fixed;top:18px;right:22px;background:none;border:none;
@@ -118,6 +130,61 @@ select.ctrl-select:focus{border-color:var(--green)}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:#1a3d1e;border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:var(--green)}
+
+/* ── Mobile optimisations ─────────────────────────────────── */
+/* Touch devices: always show card labels, skip hover effects */
+@media (hover:none),(pointer:coarse){
+  #sq-neon-hud{inset:8px}
+  .card-label{opacity:1}
+  .card:hover{transform:none;box-shadow:none;border-color:#122415}
+  .card:active{border-color:var(--green);box-shadow:0 4px 16px rgba(74,222,128,.15)}
+  .card:hover img{opacity:1}
+}
+/* Portrait mobile + desktop: NFT name at top, rarity+coin at bottom */
+@media (orientation:portrait) and (pointer:coarse),(pointer:fine){
+  #lb-title-wrap{
+    top:0 !important;left:0;right:0;bottom:0;
+    transform:none;
+    display:flex;flex-direction:column;
+    justify-content:flex-start;align-items:center;
+    padding:60px 0 55px;
+  }
+  #lb-bottom-row{flex-direction:column;align-items:center;gap:6px;margin-top:auto}
+}
+/* Landscape mobile + desktop: title left, rarity right */
+@media (orientation:landscape) and (pointer:coarse),(orientation:landscape) and (pointer:fine){
+  #lb-title-wrap{
+    top:50% !important;left:0;right:0;
+    transform:translateY(-50%);
+    display:flex;flex-direction:row;
+    justify-content:space-between;align-items:flex-start;
+    padding:0 66px;
+  }
+  #lb-title-group{align-items:flex-start}
+  #lb-title{text-align:left;font-size:clamp(.8rem,2.2vw,1.1rem)}
+  #lb-traits{flex-direction:column;flex-wrap:nowrap;gap:3px 0;max-width:none;max-height:38vh;overflow-y:auto}
+  #lb-traits .lb-trait{line-height:1.6}
+  #lb-bottom-row{flex-direction:column;align-items:center;margin-top:0;gap:4px;margin-right:24px}
+  #lb-counter{font-size:.65rem;text-align:right;line-height:1.5}
+}
+/* Landscape desktop: nudge text toward center and down */
+@media (orientation:landscape) and (pointer:fine){
+  #lb-title-wrap{top:58% !important;padding:0 160px}
+}
+/* Small screens (phones) */
+@media (max-width:520px){
+  header{padding:28px 14px 18px}
+  header p{font-size:.75rem;letter-spacing:.18em}
+  .badge{margin-top:10px;font-size:.68rem}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:14px 10px 40px}
+  #ctrl-body{width:calc(100vw - 36px)}
+  #lb-close{font-size:2.4rem;top:10px;right:10px;padding:6px 10px}
+  .nav-btn{width:48px;height:48px}
+  #lb-prev{left:6px}
+  #lb-next{right:6px}
+  #lb-title{font-size:clamp(.85rem,3.5vw,1.1rem);letter-spacing:.15em}
+  #lb-counter{font-size:.65rem}
+}
 </style>
 </head>
 <body>
@@ -1140,9 +1207,13 @@ select.ctrl-select:focus{border-color:var(--green)}
   <button class="nav-btn" id="lb-prev" onclick="nav(-1)">&#8592;</button>
   <button class="nav-btn" id="lb-next" onclick="nav(1)">&#8594;</button>
   <div id="lb-title-wrap">
-    <div id="lb-title"></div>
+    <div id="lb-title-group">
+      <div id="lb-title"></div>
+      <div id="lb-traits"></div>
+    </div>
     <div id="lb-bottom-row">
       <div id="lb-counter"></div>
+      <a id="lb-forsale" target="_blank" rel="noopener">FOR SALE</a>
       <canvas id="coin-3d" width="52" height="52"></canvas>
     </div>
   </div>
@@ -3105,8 +3176,43 @@ miniScene.add(coinMesh);
 
 /* ===== INTERACTION STATE ===== */
 var isDragging=false,prevX=0,prevY=0,velX=0,velY=0;
+var HEDERA_TOKEN='0.0.9474754';
+var MIRROR_NODE='https://mainnet-public.mirrornode.hedera.com';
+var IPFS_GW='https://ipfs.io/ipfs/';
+var SENTX_ACCT='0.0.1064038';
+var traitsCache={};
+var spenderCache={};
+function fetchTraits(serial,cb){
+  if(traitsCache[serial]!==undefined){cb(traitsCache[serial],spenderCache[serial]||null);return;}
+  traitsCache[serial]=null;
+  var spender=null;
+  fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      spender=d.spender||null;
+      var uri=atob(d.metadata).replace('ipfs://',IPFS_GW);
+      return fetch(uri);
+    })
+    .then(function(r){return r.json();})
+    .then(function(m){
+      var a=m.attributes||m.properties||[];
+      traitsCache[serial]=Array.isArray(a)?a:[];
+      spenderCache[serial]=spender;
+      cb(traitsCache[serial],spender);
+    })
+    .catch(function(){traitsCache[serial]=[];spenderCache[serial]=null;cb([],null);});
+}
 var rotX=0,rotY=0,zoom=6.0,lbOpen=false,cur=0,animating=false;
 var panelYOffset=0.25;
+var _panelYDefault=panelYOffset;
+var _LANDSCAPE_Y_SHIFT=-0.24; // move scene down in mobile landscape
+var _PORTRAIT_Y_SHIFT=-0.18;  // move scene down in mobile portrait
+function syncPanelY(){
+  var touch=isTouchDevice();
+  panelYOffset=_panelYDefault
+    +(touch&&isLandscape()?_LANDSCAPE_Y_SHIFT:0)
+    +(touch&&!isLandscape()?_PORTRAIT_Y_SHIFT:0);
+}
 var pointOn=true,pointIntScale=1.0,el1On=true,el2On=true;
 var ambOn=true,keyOn=true,fillOn=true,rimOn=true;
 var glassOn=true,backGlassOn=true;
@@ -3240,14 +3346,41 @@ c3d.addEventListener('mousemove',function(e){
     rotY+=velY; rotX+=velX; prevX=e.clientX; prevY=e.clientY;
 });
 window.addEventListener('mouseup',function(){isDragging=false;});
-c3d.addEventListener('touchstart',function(e){isDragging=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;velX=velY=0;});
+var _pinchDist0=null,_pinchZoom0=zoom;
+c3d.addEventListener('touchstart',function(e){
+    if(e.touches.length===2){
+        isDragging=false;
+        var dx=e.touches[0].clientX-e.touches[1].clientX;
+        var dy=e.touches[0].clientY-e.touches[1].clientY;
+        _pinchDist0=Math.hypot(dx,dy); _pinchZoom0=zoom;
+    }else{
+        isDragging=true; prevX=e.touches[0].clientX; prevY=e.touches[0].clientY; velX=velY=0;
+    }
+},{passive:false});
 c3d.addEventListener('touchmove',function(e){
+    if(e.touches.length===2&&_pinchDist0!==null){
+        var dx=e.touches[0].clientX-e.touches[1].clientX;
+        var dy=e.touches[0].clientY-e.touches[1].clientY;
+        zoom=Math.max(2.5,Math.min(10,_pinchZoom0*(_pinchDist0/Math.hypot(dx,dy))));
+        e.preventDefault(); return;
+    }
     if(!isDragging)return;
     velY=(e.touches[0].clientX-prevX)*.005; velX=(e.touches[0].clientY-prevY)*.005;
     rotY+=velY; rotX+=velX; prevX=e.touches[0].clientX; prevY=e.touches[0].clientY;
     e.preventDefault();
 },{passive:false});
-window.addEventListener('touchend',function(){isDragging=false;});
+window.addEventListener('touchend',function(){isDragging=false; _pinchDist0=null;});
+window.addEventListener('resize',function(){
+    if(!lbOpen)return;
+    var W=window.innerWidth,H=window.innerHeight;
+    renderer.setSize(W,H);
+    camera.aspect=W/H; camera.updateProjectionMatrix();
+    syncPanelY(); positionTitleBar();
+    if(isTouchDevice()){
+        if(isLandscape()&&!fsEl())tryFullscreen();
+        else if(!isLandscape()&&fsEl())tryExitFullscreen();
+    }
+});
 window.addEventListener('wheel',function(e){
     if(!lbOpen)return;
     zoom=Math.max(2.5,Math.min(10,zoom+e.deltaY*.005)); e.preventDefault();
@@ -3327,6 +3460,21 @@ function loadNFT(index,cb){
     }else{done();}
 }
 
+/* ===== FULLSCREEN HELPERS ===== */
+function isTouchDevice(){return navigator.maxTouchPoints>0;}
+function isLandscape(){return window.innerWidth>window.innerHeight;}
+function fsEl(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+function tryFullscreen(){
+    var lb=document.getElementById('lb3d');
+    if(lb.requestFullscreen)lb.requestFullscreen();
+    else if(lb.webkitRequestFullscreen)lb.webkitRequestFullscreen();
+}
+function tryExitFullscreen(){
+    if(!fsEl())return;
+    if(document.exitFullscreen)document.exitFullscreen();
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+}
+
 /* ===== OPEN / CLOSE / NAV ===== */
 var titleBarOffsetY=-20;
 function positionTitleBar(){
@@ -3334,22 +3482,27 @@ function positionTitleBar(){
     var halfH=Math.tan(40*Math.PI/360)*5.0;
     var ndcY=(panelYOffset-1.35)/halfH;
     var screenY=H*(1-(ndcY+1)/2);
-    document.getElementById('lb-title-wrap').style.top=(screenY+42+titleBarOffsetY)+'px';
+    var el=document.getElementById('lb-title-wrap');
+    var elH=el.offsetHeight||80;
+    var top=Math.min(screenY+42+titleBarOffsetY, H-elH-24);
+    el.style.top=top+'px';
 }
 function open3d(i){
-    cur=i; lbOpen=true; velX=velY=0; rotX=0; rotY=0; zoom=6.0;
+    cur=i; lbOpen=true; velX=velY=0; rotX=0; rotY=0; zoom=isTouchDevice()?(isLandscape()?5.5:8.0):6.0;
     var lb=document.getElementById('lb3d');
     lb.style.display='flex'; document.body.style.overflow='hidden';
     var W=window.innerWidth,H=window.innerHeight;
     renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix();
-    positionTitleBar();
+    syncPanelY(); positionTitleBar();
     startGoopAnim();
     loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();}});
     setTimeout(function(){lb.classList.add('active');},10);
+    if(isTouchDevice()&&isLandscape())tryFullscreen();
 }
 function close3d(){
     lbOpen=false; animating=false;
     stopGoopAnim();
+    tryExitFullscreen();
     var lb=document.getElementById('lb3d');
     lb.classList.remove('active');
     setTimeout(function(){lb.style.display='none';},200);
@@ -3361,8 +3514,27 @@ function nav(dir){
     loadNFT(cur,updateInfo);
 }
 function updateInfo(){
-    document.getElementById('lb-title').textContent  =images[cur].title;
-    document.getElementById('lb-counter').textContent='RARITY : '+(cur+1)+' / '+images.length;
+    document.getElementById('lb-title').textContent=images[cur].title;
+    document.getElementById('lb-counter').innerHTML='RARITY :<br>'+(cur+1)+' / '+images.length;
+    var traitsEl=document.getElementById('lb-traits');
+    traitsEl.innerHTML='';
+    var forSaleEl=document.getElementById('lb-forsale');
+    forSaleEl.style.display='none';
+    var serial=parseInt((images[cur].title.match(/\d+/)||[])[0]);
+    if(serial){
+        fetchTraits(serial,function(attrs,spender){
+            if(attrs&&attrs.length){
+                traitsEl.innerHTML=attrs.map(function(a){
+                    return '<span class="lb-trait"><span class="lb-trait-type">'+a.trait_type+'</span> '+a.value+'</span>';
+                }).join('');
+            }
+            if(spender===SENTX_ACCT){
+                forSaleEl.textContent='FOR SALE';
+                forSaleEl.href='https://sentx.io/nft-marketplace/0.0.9474754/'+serial;
+                forSaleEl.style.display='inline-block';
+            }
+        });
+    }
 }
 
 /* ===== ANIMATION LOOP ===== */
@@ -3858,6 +4030,45 @@ document.querySelectorAll('#ctrl-body input[type=range]').forEach(function(el){
 loadDefaults();
 /* Always start with goop off regardless of saved state */
 (function(){var el=document.getElementById('goop-on');if(el.checked){el.checked=false;el.dispatchEvent(new Event('change'));}})();
+
+/* ── Gallery for-sale badges ── */
+function markCardForSale(card){
+    if(card.querySelector('.card-sale'))return;
+    var w=document.createElement('div');
+    w.className='card-sale-wrap';
+    var b=document.createElement('div');
+    b.className='card-sale';
+    var s=document.createElement('span');
+    s.textContent='FOR SALE';
+    b.appendChild(s);
+    w.appendChild(b);
+    card.appendChild(w);
+}
+function checkCardForSale(card){
+    var label=card.querySelector('.card-label');
+    if(!label)return;
+    var serial=parseInt((label.textContent.match(/\d+/)||[])[0]);
+    if(!serial)return;
+    if(spenderCache[serial]!==undefined){
+        if(spenderCache[serial]===SENTX_ACCT)markCardForSale(card);
+        return;
+    }
+    fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
+        .then(function(r){return r.json();})
+        .then(function(d){
+            spenderCache[serial]=d.spender||null;
+            if(d.spender===SENTX_ACCT)markCardForSale(card);
+        })
+        .catch(function(){});
+}
+(function(){
+    var cards=document.querySelectorAll('.card');
+    if(!('IntersectionObserver' in window)){cards.forEach(checkCardForSale);return;}
+    var obs=new IntersectionObserver(function(entries){
+        entries.forEach(function(e){if(e.isIntersecting){obs.unobserve(e.target);checkCardForSale(e.target);}});
+    },{rootMargin:'200px'});
+    cards.forEach(function(c){obs.observe(c);});
+})();
 switchFrame(parseInt(document.getElementById('frame-sel').value)||0);
 
 /* ── Video Export ── */
