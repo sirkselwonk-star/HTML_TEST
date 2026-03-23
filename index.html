@@ -220,7 +220,13 @@ select.ctrl-select:focus{border-color:var(--green)}
   transition:transform .2s,filter .2s;position:relative;display:inline-flex;align-items:center;justify-content:center}
 .theme-btn svg{width:100%;height:100%;filter:drop-shadow(0 0 2px rgba(0,0,0,.5))}
 .theme-btn:hover{transform:scale(1.25)}
-.theme-btn.active{transform:scale(1.2);filter:drop-shadow(0 0 6px var(--tb-glow,#fff)) drop-shadow(0 0 12px var(--tb-glow,#fff))}
+@keyframes glow-flicker{
+  0%,19%,21%,23%,25%,54%,56%,100%{
+    filter:drop-shadow(0 0 6px var(--tb-glow,#fff)) drop-shadow(0 0 12px var(--tb-glow,#fff)) drop-shadow(0 0 20px var(--tb-glow,#fff));
+  }
+  20%,24%,55%{filter:drop-shadow(0 0 2px rgba(0,0,0,.5))}
+}
+.theme-btn.active{transform:scale(1.2);animation:glow-flicker 4s infinite alternate}
 </style>
 </head>
 <body>
