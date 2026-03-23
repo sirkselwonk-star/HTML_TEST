@@ -1607,7 +1607,7 @@ select.ctrl-select:focus{border-color:var(--green)}
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label">Inset</span>
-          <input type="range" id="sqneon-inset" min="0" max="80" step="1" value="20">
+          <input type="range" id="sqneon-inset" min="0" max="80" step="1" value="8">
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label">Width</span>
@@ -3124,7 +3124,7 @@ pivot.add(ringLight);
 
 /* ── HUD Square Neon ── */
 var sqNeonOn=true, sqNeonColorHex='#4ade80', sqNeonGlow=18;
-var sqNeonInset=20, sqNeonBW=2;
+var sqNeonInset=8, sqNeonBW=2;
 function applyHudNeon(){
     var el=document.getElementById('sq-neon-hud'); if(!el)return;
     el.style.display=sqNeonOn?'block':'none';
