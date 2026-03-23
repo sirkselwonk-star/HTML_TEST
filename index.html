@@ -3138,6 +3138,16 @@ function applyHudNeon(){
     el.style.inset=sqNeonInset+'px';
     var b=sqNeonGlow, b2=Math.round(b/2);
     el.style.boxShadow='0 0 '+b+'px '+sqNeonColorHex+',inset 0 0 '+b2+'px '+sqNeonColorHex;
+    updateCtrlBodyMaxHeight();
+}
+function updateCtrlBodyMaxHeight(){
+    var body=document.getElementById('ctrl-body');
+    var toggle=document.getElementById('ctrl-toggle');
+    if(!body||!toggle)return;
+    var panelTop=18, marginTop=7;
+    var bodyTop=panelTop+toggle.offsetHeight+marginTop;
+    var available=window.innerHeight-sqNeonInset-bodyTop-4;
+    body.style.maxHeight=Math.max(80,available)+'px';
 }
 
 
@@ -3380,7 +3390,7 @@ window.addEventListener('resize',function(){
     var W=window.innerWidth,H=window.innerHeight;
     renderer.setSize(W,H);
     camera.aspect=W/H; camera.updateProjectionMatrix();
-    syncPanelY(); positionTitleBar();
+    syncPanelY(); positionTitleBar(); updateCtrlBodyMaxHeight();
     if(isTouchDevice()){
         if(isLandscape()&&!fsEl())tryFullscreen();
         else if(!isLandscape()&&fsEl())tryExitFullscreen();
@@ -3498,7 +3508,7 @@ function open3d(i){
     lb.style.display='flex'; document.body.style.overflow='hidden';
     var W=window.innerWidth,H=window.innerHeight;
     renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix();
-    syncPanelY(); positionTitleBar();
+    syncPanelY(); positionTitleBar(); updateCtrlBodyMaxHeight();
     startGoopAnim();
     loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();}});
     setTimeout(function(){lb.classList.add('active');},10);
