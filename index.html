@@ -907,6 +907,7 @@ var COLOR_THEMES={
     gradTop:'#020f04',
     ambient:0x011a05,fill:0x22c55e,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
+    ambientInt:2.0,fillInt:0.45,rimInt:0.35,pointInt:0.9,el1Int:0.6,el2Int:0.4,
     wallDot:'rgba(0,255,64,0.13)',edgeGlow:'#00ff64',dotGlow:'#00ff64',
     ring:0x4ade80,ringHex:'#4ade80',goop:'#4ade80',
     edgeMat:0x0a1a0c,backMat:0x010f03,floor:0x010f03,
@@ -920,6 +921,7 @@ var COLOR_THEMES={
     gradTop:'#020e14',
     ambient:0x011a22,fill:0x22a5c5,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
+    ambientInt:2.0,fillInt:0.45,rimInt:0.35,pointInt:0.9,el1Int:0.6,el2Int:0.4,
     wallDot:'rgba(0,200,255,0.13)',edgeGlow:'#00e5ff',dotGlow:'#00e5ff',
     ring:0x22d3ee,ringHex:'#22d3ee',goop:'#22d3ee',
     edgeMat:0x0a1a1c,backMat:0x010a0f,floor:0x010a0f,
@@ -933,6 +935,7 @@ var COLOR_THEMES={
     gradTop:'#0c0414',
     ambient:0x0e0520,fill:0x7c3aed,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
+    ambientInt:2.0,fillInt:0.45,rimInt:0.35,pointInt:0.9,el1Int:0.6,el2Int:0.4,
     wallDot:'rgba(168,85,247,0.13)',edgeGlow:'#bf00ff',dotGlow:'#bf00ff',
     ring:0xa855f7,ringHex:'#a855f7',goop:'#a855f7',
     edgeMat:0x140a1c,backMat:0x0a0310,floor:0x0a0310,
@@ -946,6 +949,7 @@ var COLOR_THEMES={
     gradTop:'#140410',
     ambient:0x200510,fill:0xdb2777,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
+    ambientInt:2.0,fillInt:0.45,rimInt:0.35,pointInt:0.9,el1Int:0.6,el2Int:0.4,
     wallDot:'rgba(244,114,182,0.13)',edgeGlow:'#ff0088',dotGlow:'#ff0088',
     ring:0xf472b6,ringHex:'#f472b6',goop:'#f472b6',
     edgeMat:0x1c0a14,backMat:0x100308,floor:0x100308,
@@ -959,6 +963,7 @@ var COLOR_THEMES={
     gradTop:'#140a04',
     ambient:0x201005,fill:0xea580c,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
+    ambientInt:2.0,fillInt:0.45,rimInt:0.35,pointInt:0.9,el1Int:0.6,el2Int:0.4,
     wallDot:'rgba(251,146,60,0.13)',edgeGlow:'#ff8800',dotGlow:'#ff8800',
     ring:0xfb923c,ringHex:'#fb923c',goop:'#fb923c',
     edgeMat:0x1c120a,backMat:0x100803,floor:0x100803,
@@ -972,6 +977,7 @@ var COLOR_THEMES={
     gradTop:'#140404',
     ambient:0x200505,fill:0xdc2626,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
+    ambientInt:2.0,fillInt:0.45,rimInt:0.35,pointInt:0.9,el1Int:0.6,el2Int:0.4,
     wallDot:'rgba(248,113,113,0.13)',edgeGlow:'#ff0044',dotGlow:'#ff0044',
     ring:0xf87171,ringHex:'#f87171',goop:'#f87171',
     edgeMat:0x1c0a0a,backMat:0x100303,floor:0x100303,
@@ -1006,12 +1012,12 @@ function applyColorTheme(name){
 
   /* ── 3D Scene updates (only if scene is initialized) ── */
   if(typeof ambient!=='undefined'){
-    ambient.color.setHex(t.ambient);
-    fill.color.setHex(t.fill);
-    point.color.setHex(t.point);
-    el1.color.setHex(t.el1);
-    el2.color.setHex(t.el2);
-    rim.color.setHex(t.rim);
+    ambient.color.setHex(t.ambient); ambient.intensity=t.ambientInt;
+    fill.color.setHex(t.fill); fill.intensity=t.fillInt;
+    point.color.setHex(t.point); point.intensity=t.pointInt;
+    el1.color.setHex(t.el1); el1.intensity=t.el1Int;
+    el2.color.setHex(t.el2); el2.intensity=t.el2Int;
+    rim.color.setHex(t.rim); rim.intensity=t.rimInt;
   }
   if(typeof miniAmb!=='undefined') miniAmb.color.setHex(t.ambient);
   if(typeof miniFill!=='undefined') miniFill.color.setHex(t.point);
