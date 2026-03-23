@@ -905,7 +905,7 @@ var COLOR_THEMES={
     neon:'#0fa',neonBright:'#00ff80',neonGlow:'74,222,128',
     borderDk:'#0d2e12',borderMd:'#1a3d1e',borderLt:'#2d5c32',
     gradTop:'#020f04',
-    ambient:0x011a05,fill:0x22c55e,point:0x4ade80,
+    ambient:0x011a05,fill:0x22c55e,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
     wallDot:'rgba(0,255,64,0.13)',edgeGlow:'#00ff64',dotGlow:'#00ff64',
     ring:0x4ade80,ringHex:'#4ade80',goop:'#4ade80',
@@ -918,7 +918,7 @@ var COLOR_THEMES={
     neon:'#0ef',neonBright:'#00e5ff',neonGlow:'34,211,238',
     borderDk:'#0d2230',borderMd:'#1a3d4e',borderLt:'#2d5c6e',
     gradTop:'#020e14',
-    ambient:0x011a22,fill:0x22a5c5,point:0x22d3ee,
+    ambient:0x011a22,fill:0x22a5c5,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
     wallDot:'rgba(0,200,255,0.13)',edgeGlow:'#00e5ff',dotGlow:'#00e5ff',
     ring:0x22d3ee,ringHex:'#22d3ee',goop:'#22d3ee',
@@ -931,7 +931,7 @@ var COLOR_THEMES={
     neon:'#b0f',neonBright:'#bf00ff',neonGlow:'168,85,247',
     borderDk:'#1e0d30',borderMd:'#3a1a55',borderLt:'#5c2d80',
     gradTop:'#0c0414',
-    ambient:0x0e0520,fill:0x7c3aed,point:0xa855f7,
+    ambient:0x0e0520,fill:0x7c3aed,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
     wallDot:'rgba(168,85,247,0.13)',edgeGlow:'#bf00ff',dotGlow:'#bf00ff',
     ring:0xa855f7,ringHex:'#a855f7',goop:'#a855f7',
@@ -944,7 +944,7 @@ var COLOR_THEMES={
     neon:'#f5a',neonBright:'#ff0088',neonGlow:'244,114,182',
     borderDk:'#300d20',borderMd:'#551a38',borderLt:'#802d55',
     gradTop:'#140410',
-    ambient:0x200510,fill:0xdb2777,point:0xf472b6,
+    ambient:0x200510,fill:0xdb2777,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
     wallDot:'rgba(244,114,182,0.13)',edgeGlow:'#ff0088',dotGlow:'#ff0088',
     ring:0xf472b6,ringHex:'#f472b6',goop:'#f472b6',
@@ -957,7 +957,7 @@ var COLOR_THEMES={
     neon:'#fa0',neonBright:'#ff8800',neonGlow:'251,146,60',
     borderDk:'#302010',borderMd:'#553a1a',borderLt:'#80582d',
     gradTop:'#140a04',
-    ambient:0x201005,fill:0xea580c,point:0xfb923c,
+    ambient:0x201005,fill:0xea580c,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
     wallDot:'rgba(251,146,60,0.13)',edgeGlow:'#ff8800',dotGlow:'#ff8800',
     ring:0xfb923c,ringHex:'#fb923c',goop:'#fb923c',
@@ -970,7 +970,7 @@ var COLOR_THEMES={
     neon:'#f44',neonBright:'#ff0044',neonGlow:'248,113,113',
     borderDk:'#300d0d',borderMd:'#551a1a',borderLt:'#802d2d',
     gradTop:'#140404',
-    ambient:0x200505,fill:0xdc2626,point:0xf87171,
+    ambient:0x200505,fill:0xdc2626,point:0xffffff,
     el1:0xffffff,el2:0xffffff,rim:0xffffff,
     wallDot:'rgba(248,113,113,0.13)',edgeGlow:'#ff0044',dotGlow:'#ff0044',
     ring:0xf87171,ringHex:'#f87171',goop:'#f87171',
@@ -2078,7 +2078,7 @@ var ambient=new THREE.AmbientLight(0x011a05,2.0); scene.add(ambient);
 const key=new THREE.DirectionalLight(0xf0fff4,1.3); key.position.set(3,5,5); key.castShadow=true; scene.add(key);
 const fill=new THREE.DirectionalLight(0x22c55e,0.45); fill.position.set(-4,-2,2); scene.add(fill);
 const rim=new THREE.DirectionalLight(0xffffff,0.35); rim.position.set(0,3,-5); scene.add(rim);
-const point=new THREE.PointLight(0x4ade80,0.9,20); point.position.set(2,2,3); scene.add(point);
+const point=new THREE.PointLight(0xffffff,0.9,20); point.position.set(2,2,3); scene.add(point);
 var el1=new THREE.PointLight(0xffffff,0.6,30); el1.position.set(-3.5,0,3); scene.add(el1);
 var el2=new THREE.PointLight(0xffffff,0.4,30); el2.position.set(3.5,-3,3); scene.add(el2);
 
