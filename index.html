@@ -4552,32 +4552,50 @@ function exportBatchItem(idx,format,dirHandle,onDone){
 }
 
 /* ===== AR — Export scene to GLB & launch model-viewer ===== */
+
+/* Convert a CanvasTexture to a regular Texture backed by an <img> element
+   so GLTFExporter can serialize it as an embedded PNG in the GLB. */
+function bakeCanvasTexture(canvasTex){
+    var dataUrl=canvasTex.image.toDataURL('image/png');
+    var img=new Image();
+    img.src=dataUrl;
+    var tex=new THREE.Texture(img);
+    tex.flipY=canvasTex.flipY;
+    tex.wrapS=canvasTex.wrapS;
+    tex.wrapT=canvasTex.wrapT;
+    tex.encoding=canvasTex.encoding;
+    tex.needsUpdate=true;
+    return tex;
+}
+
+/* Walk a material and bake any CanvasTexture maps it carries */
+function bakeMaterialTextures(mat){
+    var mapKeys=['map','normalMap','emissiveMap','roughnessMap','metalnessMap','aoMap'];
+    mapKeys.forEach(function(k){
+        if(mat[k] && mat[k].isCanvasTexture){
+            mat[k]=bakeCanvasTexture(mat[k]);
+        }
+    });
+    mat.needsUpdate=true;
+}
+
 function exportPivotToGLB(callback){
     /* Clone the pivot group so we don't mutate the live scene */
     var arGroup=new THREE.Group();
-
-    /* Deep-clone pivot (panel + frame + coins + ring + glass) */
     var pivotClone=pivot.clone(true);
 
-    /* Ensure CanvasTextures are valid in the clone by copying .image refs */
+    /* Bake every CanvasTexture into a standard Texture with an <img> source
+       so GLTFExporter can embed them as PNG inside the GLB binary */
     pivotClone.traverse(function(child){
         if(child.isMesh && child.material){
             var mats=Array.isArray(child.material)?child.material:[child.material];
-            mats.forEach(function(mat){
-                if(mat.map && mat.map.isCanvasTexture){
-                    mat.map.needsUpdate=true;
-                }
-            });
+            mats.forEach(bakeMaterialTextures);
         }
     });
 
     arGroup.add(pivotClone);
 
-    /* Add a simple ambient + directional light so the GLB looks lit in model-viewer */
-    var arAmb=new THREE.AmbientLight(0xffffff,0.8);
-    var arKey=new THREE.DirectionalLight(0xffffff,1.0);
-    arKey.position.set(2,3,4);
-    arGroup.add(arAmb,arKey);
+    /* Lights aren't exported to GLB — model-viewer has its own IBL lighting */
 
     var exporter=new THREE.GLTFExporter();
     exporter.parse(arGroup,function(result){
