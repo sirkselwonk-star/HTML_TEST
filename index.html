@@ -917,7 +917,7 @@ select.ctrl-select:focus{border-color:var(--green)}
   <model-viewer id="ar-viewer"
     ar ar-modes="webxr scene-viewer quick-look"
     ar-scale="fixed"
-    scale="0.25 0.25 0.25"
+    scale="0.4 0.4 0.4"
     camera-controls touch-action="pan-y"
     shadow-intensity="1" shadow-softness="1"
     environment-image="neutral"
@@ -4608,27 +4608,6 @@ function exportPivotToGLB(callback){
         });
     });
 
-    /* Bake coin face texture rotation into pixels so offset stays correct. */
-    pivotClone.traverse(function(child){
-        if(!child.isMesh || !child.material) return;
-        var mats=Array.isArray(child.material)?child.material:[child.material];
-        if(mats.length===3 && mats[1].map && mats[1].map.image){
-            var origImg=mats[1].map.image;
-            var sz=origImg.width||origImg.naturalWidth||512;
-            var rc=document.createElement('canvas'); rc.width=sz; rc.height=sz;
-            var rx=rc.getContext('2d');
-            rx.translate(sz/2,sz/2);
-            rx.rotate(Math.PI/2);
-            rx.drawImage(origImg,-sz/2,-sz/2,sz,sz);
-            var rotImg=new Image();
-            pendingImgs.push(rotImg);
-            rotImg.src=rc.toDataURL('image/png');
-            mats[1].map.image=rotImg;
-            mats[1].map.rotation=0;
-            mats[1].map.needsUpdate=true;
-        }
-    });
-
     arGroup.add(pivotClone);
 
     var arAmb=new THREE.AmbientLight(0xffffff,0.8);
@@ -4639,6 +4618,25 @@ function exportPivotToGLB(callback){
     /* Wait for all baked images to decode before running the exporter */
     var loaded=0;
     function onAllReady(){
+        /* Bake coin face texture rotation into pixels now that all images are loaded */
+        pivotClone.traverse(function(child){
+            if(!child.isMesh || !child.material) return;
+            var mats=Array.isArray(child.material)?child.material:[child.material];
+            if(mats.length===3 && mats[1].map && mats[1].map.image){
+                var origImg=mats[1].map.image;
+                var sz=origImg.width||origImg.naturalWidth||512;
+                var rc=document.createElement('canvas'); rc.width=sz; rc.height=sz;
+                var rx=rc.getContext('2d');
+                rx.translate(sz/2,sz/2);
+                rx.rotate(Math.PI/2);
+                rx.drawImage(origImg,-sz/2,-sz/2,sz,sz);
+                var rotImg=new Image();
+                rotImg.src=rc.toDataURL('image/png');
+                mats[1].map.image=rotImg;
+                mats[1].map.rotation=0;
+                mats[1].map.needsUpdate=true;
+            }
+        });
         var exporter=new THREE.GLTFExporter();
         exporter.parse(arGroup,function(result){
         /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
