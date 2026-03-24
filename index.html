@@ -4682,18 +4682,11 @@ function prepareAR(){
         btn.textContent='\u{1f4f1} VIEW IN AR';
         btn.disabled=false;
     }
-    viewer.addEventListener('load',function onLoad(){
-        viewer.removeEventListener('load',onLoad);
-        markReady();
-    });
     exportPivotToGLB(function(glbUrl){
         if(gen!==arGen) return; /* stale export — discard */
         viewer.setAttribute('src',glbUrl);
-        /* Fallback: poll viewer.loaded every 500ms in case load event doesn't fire */
-        var poll=setInterval(function(){
-            if(gen!==arGen){ clearInterval(poll); return; }
-            if(viewer.loaded){ clearInterval(poll); markReady(); }
-        },500);
+        /* GLB is a blob URL already in memory — mark ready immediately */
+        markReady();
     });
 }
 /* Invalidate pre-loaded AR when navigating to a different coin */
