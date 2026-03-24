@@ -920,7 +920,7 @@ select.ctrl-select:focus{border-color:var(--green)}
     scale="0.4 0.4 0.4"
     auto-rotate auto-rotate-delay="0"
     rotation-per-second="30deg"
-    autoplay
+    autoplay animation-name="Action"
     camera-controls touch-action="pan-y"
     shadow-intensity="1" shadow-softness="1"
     environment-image="neutral"
@@ -4556,6 +4556,136 @@ function exportBatchItem(idx,format,dirHandle,onDone){
     recorder.start(); renderFrame();
 }
 
+/* ===== GLB animation injection (bypasses r128 GLTFExporter bug) ===== */
+function injectAnimationIntoGLB(buf){
+    /* Parse GLB: 12-byte header, then JSON chunk, then BIN chunk */
+    var hdr=new DataView(buf);
+    var jsonLen=hdr.getUint32(12,true);
+    var jsonBytes=new Uint8Array(buf,20,jsonLen);
+    var jsonStr='';
+    for(var i=0;i<jsonLen;i++) jsonStr+=String.fromCharCode(jsonBytes[i]);
+    var g=JSON.parse(jsonStr);
+
+    var binOff=20+jsonLen;
+    var binLen=new DataView(buf).getUint32(binOff,true);
+    var binData=new Uint8Array(buf,binOff+8,binLen);
+
+    /* Find the top-level node to animate (CoinPivot or scene root node) */
+    var targetNode=0;
+    if(g.nodes){
+        for(var ni=0;ni<g.nodes.length;ni++){
+            if(g.nodes[ni].name==='CoinPivot'){targetNode=ni;break;}
+        }
+    }
+    /* Read base translation so bob oscillates around it */
+    var baseT=g.nodes[targetNode].translation||[0,0,0];
+
+    /* Generate keyframe data */
+    var STEPS=48, DUR=9, BOB=0.12;
+    var times=new Float32Array(STEPS+1);
+    var positions=new Float32Array((STEPS+1)*3);
+    var quats=new Float32Array((STEPS+1)*4);
+    for(var k=0;k<=STEPS;k++){
+        var f=k/STEPS;
+        times[k]=f*DUR;
+        /* bob */
+        positions[k*3  ]=baseT[0];
+        positions[k*3+1]=baseT[1]+Math.sin(f*Math.PI*2)*BOB;
+        positions[k*3+2]=baseT[2];
+        /* spin (Y-axis quaternion) */
+        var a=f*Math.PI*2;
+        quats[k*4  ]=0;
+        quats[k*4+1]=Math.sin(a/2);
+        quats[k*4+2]=0;
+        quats[k*4+3]=Math.cos(a/2);
+    }
+
+    /* Append keyframe bytes to BIN, aligned to 4 bytes */
+    var curBin=binLen;
+    /* Align start to 4 bytes (should already be) */
+    curBin=(curBin+3)&~3;
+    var tOff=curBin;                   curBin+=times.byteLength;
+    curBin=(curBin+3)&~3;
+    var pOff=curBin;                   curBin+=positions.byteLength;
+    curBin=(curBin+3)&~3;
+    var qOff=curBin;                   curBin+=quats.byteLength;
+    var newBinLen=(curBin+3)&~3;
+
+    var newBin=new Uint8Array(newBinLen);
+    newBin.set(binData);
+    newBin.set(new Uint8Array(times.buffer),tOff);
+    newBin.set(new Uint8Array(positions.buffer),pOff);
+    newBin.set(new Uint8Array(quats.buffer),qOff);
+
+    /* Add bufferViews */
+    if(!g.bufferViews) g.bufferViews=[];
+    var tvIdx=g.bufferViews.length;
+    g.bufferViews.push({buffer:0,byteOffset:tOff,byteLength:times.byteLength});
+    var pvIdx=g.bufferViews.length;
+    g.bufferViews.push({buffer:0,byteOffset:pOff,byteLength:positions.byteLength});
+    var qvIdx=g.bufferViews.length;
+    g.bufferViews.push({buffer:0,byteOffset:qOff,byteLength:quats.byteLength});
+
+    /* Add accessors */
+    if(!g.accessors) g.accessors=[];
+    var N=STEPS+1;
+    /* min/max for time */
+    var tAcc=g.accessors.length;
+    g.accessors.push({bufferView:tvIdx,componentType:5126,count:N,type:'SCALAR',min:[0],max:[DUR]});
+    /* min/max for positions */
+    var pMin=[baseT[0],baseT[1]-BOB,baseT[2]], pMax=[baseT[0],baseT[1]+BOB,baseT[2]];
+    var pAcc=g.accessors.length;
+    g.accessors.push({bufferView:pvIdx,componentType:5126,count:N,type:'VEC3',min:pMin,max:pMax});
+    /* min/max for quaternions */
+    var qAcc=g.accessors.length;
+    g.accessors.push({bufferView:qvIdx,componentType:5126,count:N,type:'VEC4',min:[-0,-1,-0,-1],max:[0,1,0,1]});
+
+    /* Add animation */
+    if(!g.animations) g.animations=[];
+    g.animations.push({
+        name:'Action',
+        samplers:[
+            {input:tAcc,output:pAcc,interpolation:'LINEAR'},
+            {input:tAcc,output:qAcc,interpolation:'LINEAR'}
+        ],
+        channels:[
+            {sampler:0,target:{node:targetNode,path:'translation'}},
+            {sampler:1,target:{node:targetNode,path:'rotation'}}
+        ]
+    });
+
+    /* Update buffer byte length */
+    g.buffers[0].byteLength=newBinLen;
+
+    /* Rebuild GLB */
+    var nj=JSON.stringify(g);
+    while(nj.length%4!==0) nj+=' ';             /* pad JSON to 4-byte boundary */
+    var njEnc=[];
+    for(var ci=0;ci<nj.length;ci++) njEnc.push(nj.charCodeAt(ci));
+    var njBytes=new Uint8Array(njEnc);
+
+    var total=12+8+njBytes.length+8+newBinLen;
+    var out=new ArrayBuffer(total);
+    var dv=new DataView(out);
+    var ub=new Uint8Array(out);
+
+    /* GLB header */
+    dv.setUint32(0,0x46546C67,true);             /* magic  "glTF" */
+    dv.setUint32(4,2,true);                       /* version 2     */
+    dv.setUint32(8,total,true);                    /* total length  */
+    /* JSON chunk */
+    dv.setUint32(12,njBytes.length,true);
+    dv.setUint32(16,0x4E4F534A,true);             /* "JSON" */
+    ub.set(njBytes,20);
+    /* BIN chunk */
+    var bo=20+njBytes.length;
+    dv.setUint32(bo,newBinLen,true);
+    dv.setUint32(bo+4,0x004E4942,true);           /* "BIN\0" */
+    ub.set(newBin,bo+8);
+
+    return out;
+}
+
 /* ===== AR — Export scene to GLB & launch model-viewer ===== */
 function exportPivotToGLB(callback){
     /* Deep-clone pivot (panel + frame + coins + ring + glass) */
@@ -4608,59 +4738,7 @@ function exportPivotToGLB(callback){
         });
     });
 
-    /* --- Bake rotation + bob animation into the GLB ---
-       Export pivotClone directly as the root so animation tracks
-       target the root node (r128 GLTFExporter reliably resolves root).
-       model-viewer provides its own lighting so no baked lights needed. */
-
     pivotClone.name='CoinPivot';
-
-    var animDuration=9; /* ~9s loop */
-    var steps=48;
-    var bobAmp=0.12;
-    var baseY=pivotClone.position.y;
-
-    /* Bob: Y-position sine wave */
-    var bobTimes=new Float32Array(steps+1);
-    var bobValues=new Float32Array((steps+1)*3);
-    for(var bi=0;bi<=steps;bi++){
-        var frac=bi/steps;
-        bobTimes[bi]=frac*animDuration;
-        bobValues[bi*3]=pivotClone.position.x;
-        bobValues[bi*3+1]=baseY+Math.sin(frac*2*Math.PI)*bobAmp;
-        bobValues[bi*3+2]=pivotClone.position.z;
-    }
-    var bobTrack=new THREE.VectorKeyframeTrack(
-        'CoinPivot.position', bobTimes, bobValues
-    );
-
-    /* Spin: continuous Y rotation over the same duration (one full turn) */
-    var spinTimes=new Float32Array(steps+1);
-    var spinValues=new Float32Array((steps+1)*4);
-    var quat=new THREE.Quaternion();
-    var euler=new THREE.Euler();
-    for(var si=0;si<=steps;si++){
-        var sf=si/steps;
-        spinTimes[si]=sf*animDuration;
-        euler.set(0, sf*2*Math.PI, 0);
-        quat.setFromEuler(euler);
-        spinValues[si*4]=quat.x;
-        spinValues[si*4+1]=quat.y;
-        spinValues[si*4+2]=quat.z;
-        spinValues[si*4+3]=quat.w;
-    }
-    var spinTrack=new THREE.QuaternionKeyframeTrack(
-        'CoinPivot.quaternion', spinTimes, spinValues
-    );
-
-    var clip=new THREE.AnimationClip('Action',animDuration,[bobTrack,spinTrack]);
-
-    /* Wrap pivotClone in a Scene so the exporter registers it in nodeMap.
-       When a bare Group is passed as root, r128 GLTFExporter may not add
-       the root itself to nodeMap, causing animation track→node resolution
-       to fail silently (nodeMap.get() returns undefined → animation dropped). */
-    var exportScene=new THREE.Scene();
-    exportScene.add(pivotClone);
 
     /* Wait for all baked images to decode before running the exporter */
     var loaded=0;
@@ -4685,7 +4763,11 @@ function exportPivotToGLB(callback){
             }
         });
         var exporter=new THREE.GLTFExporter();
-        exporter.parse(exportScene,function(result){
+        exporter.parse(pivotClone,function(result){
+        /* Inject spin+bob animation directly into the GLB binary.
+           r128 GLTFExporter silently drops animations (nodeMap bug),
+           so we bypass it and write glTF animation JSON + binary ourselves. */
+        result=injectAnimationIntoGLB(result);
         /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
         var bytes=new Uint8Array(result);
         var chunks=[]; var chunkSz=8192;
@@ -4694,7 +4776,7 @@ function exportPivotToGLB(callback){
         }
         var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
         callback(url);
-    },{binary:true, forceIndices:true, truncateDrawRange:false, animations:[clip]});
+    },{binary:true, trs:true, forceIndices:true, truncateDrawRange:false});
     }
     if(pendingImgs.length===0){ onAllReady(); return; }
     function checkDone(){ loaded++; if(loaded>=pendingImgs.length) onAllReady(); }
