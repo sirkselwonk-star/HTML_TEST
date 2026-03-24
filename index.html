@@ -2805,7 +2805,7 @@ function open3d(i){
     renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix();
     syncPanelY(); positionTitleBar(); updateCtrlBodyMaxHeight();
     startGoopAnim();
-    loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();}});
+    loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();} prepareAR();});
     setTimeout(function(){lb.classList.add('active');},10);
     if(isTouchDevice()&&isLandscape())tryFullscreen();
 }
@@ -2821,7 +2821,8 @@ function close3d(){
 function nav(dir){
     cur=(cur+dir+images.length)%images.length;
     rotY+=dir*0.6;
-    loadNFT(cur,updateInfo);
+    invalidateAR();
+    loadNFT(cur,function(){updateInfo(); prepareAR();});
 }
 function updateInfo(){
     document.getElementById('lb-title').textContent=images[cur].title;
@@ -4658,40 +4659,50 @@ function exportPivotToGLB(callback){
     }
 }
 
-function launchAR(){
+/* Pre-export GLB in background so AR launches instantly */
+var arReady=false;
+var arPending=false; /* true while export/load is in progress */
+function prepareAR(){
+    if(arReady||arPending) return;
+    arPending=true;
     var btn=document.getElementById('ar-btn');
-    btn.textContent='EXPORTING…';
+    btn.textContent='PREPARING AR\u2026';
     btn.disabled=true;
-
-    var activated=false;
     var viewer=document.getElementById('ar-viewer');
-    function showAR(){
-        if(activated) return;
-        activated=true;
-        document.getElementById('ar-overlay').style.display='block';
-        btn.textContent='\u{1f4f1} VIEW IN AR';
-        btn.disabled=false;
-        if(viewer.canActivateAR) viewer.activateAR();
-    }
-
-    /* Fallback: proceed after 7s no matter what */
-    setTimeout(showAR,7000);
-
     exportPivotToGLB(function(glbUrl){
         viewer.setAttribute('src',glbUrl);
         viewer.addEventListener('load',function onLoad(){
             viewer.removeEventListener('load',onLoad);
-            showAR();
+            arReady=true; arPending=false;
+            btn.textContent='\u{1f4f1} VIEW IN AR';
+            btn.disabled=false;
         });
-        /* Fallback after src is set: proceed after 7s */
-        setTimeout(showAR,7000);
+        /* Fallback: mark ready after 7s even if load event doesn't fire */
+        setTimeout(function(){
+            if(!arReady){ arReady=true; arPending=false;
+                btn.textContent='\u{1f4f1} VIEW IN AR'; btn.disabled=false; }
+        },7000);
     });
+}
+/* Invalidate pre-loaded AR when navigating to a different coin */
+function invalidateAR(){
+    arReady=false; arPending=false;
+    var viewer=document.getElementById('ar-viewer');
+    viewer.removeAttribute('src');
+    var btn=document.getElementById('ar-btn');
+    btn.textContent='\u{1f4f1} VIEW IN AR';
+    btn.disabled=true;
+}
+
+function launchAR(){
+    if(!arReady) return; /* button should be disabled, but guard anyway */
+    document.getElementById('ar-overlay').style.display='block';
+    var viewer=document.getElementById('ar-viewer');
+    if(viewer.canActivateAR) viewer.activateAR();
 }
 
 function closeAR(){
     document.getElementById('ar-overlay').style.display='none';
-    var viewer=document.getElementById('ar-viewer');
-    viewer.removeAttribute('src');
 }
 </script>
 </body>
