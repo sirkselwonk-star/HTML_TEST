@@ -2806,6 +2806,7 @@ function open3d(i){
     renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix();
     syncPanelY(); positionTitleBar(); updateCtrlBodyMaxHeight();
     startGoopAnim();
+    invalidateAR();
     loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();} prepareAR();});
     setTimeout(function(){lb.classList.add('active');},10);
     if(isTouchDevice()&&isLandscape())tryFullscreen();
