@@ -4648,18 +4648,22 @@ function launchAR(){
 
     exportPivotToGLB(function(glbUrl){
         var viewer=document.getElementById('ar-viewer');
+        var activated=false;
+        function showAR(){
+            if(activated) return;
+            activated=true;
+            document.getElementById('ar-overlay').style.display='block';
+            btn.textContent='\u{1f4f1} VIEW IN AR';
+            btn.disabled=false;
+            if(viewer.canActivateAR) viewer.activateAR();
+        }
         viewer.setAttribute('src',glbUrl);
-        document.getElementById('ar-overlay').style.display='block';
-        btn.textContent='\u{1f4f1} VIEW IN AR';
-        btn.disabled=false;
-
-        /* Auto-activate AR if supported */
         viewer.addEventListener('load',function onLoad(){
             viewer.removeEventListener('load',onLoad);
-            if(viewer.canActivateAR){
-                viewer.activateAR();
-            }
+            showAR();
         });
+        /* Fallback: proceed after 2s even if load event doesn't fire */
+        setTimeout(showAR,2000);
     });
 }
 
