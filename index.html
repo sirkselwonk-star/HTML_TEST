@@ -4559,16 +4559,32 @@ function exportPivotToGLB(callback){
     /* Deep-clone pivot (panel + frame + coins + ring + glass) */
     var pivotClone=pivot.clone(true);
 
-    /* Ensure CanvasTextures are valid in the clone by copying .image refs */
+    /* Convert CanvasTextures to img-backed Textures so GLTFExporter
+       can embed them as PNG in the GLB. Only affects the clone. */
     pivotClone.traverse(function(child){
-        if(child.isMesh && child.material){
-            var mats=Array.isArray(child.material)?child.material:[child.material];
-            mats.forEach(function(mat){
-                if(mat.map && mat.map.isCanvasTexture){
-                    mat.map.needsUpdate=true;
-                }
+        if(!child.isMesh || !child.material) return;
+        var mats=Array.isArray(child.material)?child.material:[child.material];
+        mats.forEach(function(mat){
+            ['map','emissiveMap','normalMap','roughnessMap','metalnessMap'].forEach(function(k){
+                var tex=mat[k];
+                if(!tex || !tex.image) return;
+                /* Grab pixel data from canvas or img source */
+                var src=tex.image;
+                var c=document.createElement('canvas');
+                c.width=src.width||src.naturalWidth||512;
+                c.height=src.height||src.naturalHeight||512;
+                c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+                var img=new Image();
+                img.src=c.toDataURL('image/png');
+                var newTex=new THREE.Texture(img);
+                newTex.flipY=tex.flipY;
+                newTex.wrapS=tex.wrapS;
+                newTex.wrapT=tex.wrapT;
+                newTex.needsUpdate=true;
+                mat[k]=newTex;
             });
-        }
+            mat.needsUpdate=true;
+        });
     });
 
     arGroup.add(pivotClone);
