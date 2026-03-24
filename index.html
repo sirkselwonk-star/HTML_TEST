@@ -4606,6 +4606,17 @@ function exportPivotToGLB(callback){
         });
     });
 
+    /* Apply 45° CW correction to coin face texture on the back coin */
+    pivotClone.traverse(function(child){
+        if(!child.isMesh || !child.material) return;
+        var mats=Array.isArray(child.material)?child.material:[child.material];
+        if(mats.length===3 && mats[1].map){
+            mats[1].map.rotation=-Math.PI/4;
+            mats[1].map.center.set(0.5,0.5);
+            mats[1].map.needsUpdate=true;
+        }
+    });
+
     arGroup.add(pivotClone);
 
     /* Add a simple ambient + directional light so the GLB looks lit in model-viewer */
