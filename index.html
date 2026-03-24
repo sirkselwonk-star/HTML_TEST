@@ -916,6 +916,8 @@ select.ctrl-select:focus{border-color:var(--green)}
 <div id="ar-overlay" style="display:none;position:fixed;inset:0;z-index:20000;background:#000">
   <model-viewer id="ar-viewer"
     ar ar-modes="webxr scene-viewer quick-look"
+    ar-scale="fixed"
+    scale="0.5 0.5 0.5"
     camera-controls touch-action="pan-y"
     shadow-intensity="1" shadow-softness="1"
     environment-image="neutral"
@@ -4555,7 +4557,6 @@ function exportBatchItem(idx,format,dirHandle,onDone){
 function exportPivotToGLB(callback){
     /* Clone the pivot group so we don't mutate the live scene */
     var arGroup=new THREE.Group();
-    arGroup.scale.set(0.5,0.5,0.5);
 
     /* Deep-clone pivot (panel + frame + coins + ring + glass) */
     var pivotClone=pivot.clone(true);
