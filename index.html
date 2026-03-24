@@ -621,7 +621,7 @@ select.ctrl-select:focus{border-color:var(--green)}
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label">Rotate</span>
-          <input type="range" id="cb-rot" min="-3.14" max="3.14" step="0.01" value="-1.57">
+          <input type="range" id="cb-rot" min="-3.14" max="3.14" step="0.01" value="-2.355">
         </div>
         <div class="ctrl-section">Back Ring</div>
         <div class="ctrl-row">
@@ -2533,7 +2533,7 @@ var fpOffX=0,fpOffY=0,fpScale=1.0,fpRot=0,panelPosZ=0;
 var miniCoinSz=52,hudTitlePx=20,hudCounterPx=11;
 var cfOffX=0,cfOffY=0,cfScale=1.0,cfRot=-1.57;
 var cfFlipX=false,cfFlipY=false;
-var cbOffX=0,cbOffY=0,cbScale=1.0,cbRot=-1.57;
+var cbOffX=0,cbOffY=0,cbScale=1.0,cbRot=-2.355;
 var mcfOffX=0,mcfOffY=0,mcfScale=1.0,mcfRotOff=1.5,mcfSpinSpd=0,mcfRotAcc=0;
 var mcfFlipX=false,mcfFlipY=true;
 var mcbOffX=0,mcbOffY=0,mcbScale=1.0,mcbRotOff=1.5,mcbSpinSpd=0,mcbRotAcc=0;
@@ -4586,22 +4586,6 @@ function exportPivotToGLB(callback){
                 mat[k]=newTex;
             });
             mat.needsUpdate=true;
-        });
-    });
-
-    /* Reset texture rotations on clone so GLTFExporter doesn't inherit
-       scene-specific orientations that look wrong in the exported GLB */
-    pivotClone.traverse(function(child){
-        if(!child.isMesh || !child.material) return;
-        var mats=Array.isArray(child.material)?child.material:[child.material];
-        mats.forEach(function(mat){
-            ['map','emissiveMap','normalMap','roughnessMap','metalnessMap'].forEach(function(k){
-                if(mat[k] && mat[k].rotation){
-                    mat[k].rotation=0;
-                    mat[k].center.set(0.5,0.5);
-                    mat[k].needsUpdate=true;
-                }
-            });
         });
     });
 
