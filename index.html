@@ -4559,8 +4559,21 @@ function exportPivotToGLB(callback){
     /* Deep-clone pivot (panel + frame + coins + ring + glass) */
     var pivotClone=pivot.clone(true);
 
+    /* Deep-clone materials so we never mutate the live scene.
+       pivot.clone(true) shares materials by reference in r128. */
+    pivotClone.traverse(function(child){
+        if(!child.isMesh || !child.material) return;
+        if(Array.isArray(child.material)){
+            child.material=child.material.map(function(m){return m.clone();});
+        } else {
+            child.material=child.material.clone();
+        }
+    });
+
     /* Convert CanvasTextures to img-backed Textures so GLTFExporter
-       can embed them as PNG in the GLB. Only affects the clone. */
+       can embed them as PNG in the GLB. Zero out texture rotations —
+       in the live scene these compensate for cylinder mesh rotation,
+       but GLTFExporter bakes mesh transforms into geometry. */
     pivotClone.traverse(function(child){
         if(!child.isMesh || !child.material) return;
         var mats=Array.isArray(child.material)?child.material:[child.material];
@@ -4568,7 +4581,6 @@ function exportPivotToGLB(callback){
             ['map','emissiveMap','normalMap','roughnessMap','metalnessMap'].forEach(function(k){
                 var tex=mat[k];
                 if(!tex || !tex.image) return;
-                /* Grab pixel data from canvas or img source */
                 var src=tex.image;
                 var c=document.createElement('canvas');
                 c.width=src.width||src.naturalWidth||512;
@@ -4580,41 +4592,13 @@ function exportPivotToGLB(callback){
                 newTex.flipY=tex.flipY;
                 newTex.wrapS=tex.wrapS;
                 newTex.wrapT=tex.wrapT;
-                newTex.rotation=tex.rotation||0;
-                newTex.center.copy(tex.center);
+                newTex.rotation=0;
+                newTex.center.set(0.5,0.5);
                 newTex.needsUpdate=true;
                 mat[k]=newTex;
             });
             mat.needsUpdate=true;
         });
-    });
-
-    /* Zero out texture rotations on the clone — in the live scene these
-       compensate for cylinder mesh rotation, but GLTFExporter bakes the
-       mesh transform into geometry so the texture rotation becomes extra */
-    pivotClone.traverse(function(child){
-        if(!child.isMesh || !child.material) return;
-        var mats=Array.isArray(child.material)?child.material:[child.material];
-        mats.forEach(function(mat){
-            ['map','emissiveMap','normalMap','roughnessMap','metalnessMap'].forEach(function(k){
-                if(mat[k] && mat[k].rotation){
-                    mat[k].rotation=0;
-                    mat[k].center.set(0.5,0.5);
-                    mat[k].needsUpdate=true;
-                }
-            });
-        });
-    });
-
-    /* Apply 45° CW correction to coin face texture on the back coin */
-    pivotClone.traverse(function(child){
-        if(!child.isMesh || !child.material) return;
-        var mats=Array.isArray(child.material)?child.material:[child.material];
-        if(mats.length===3 && mats[1].map){
-            mats[1].map.rotation=-Math.PI/4;
-            mats[1].map.center.set(0.5,0.5);
-            mats[1].map.needsUpdate=true;
-        }
     });
 
     arGroup.add(pivotClone);
