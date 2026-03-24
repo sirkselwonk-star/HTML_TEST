@@ -4634,8 +4634,9 @@ function exportPivotToGLB(callback){
 
     var exporter=new THREE.GLTFExporter();
     exporter.parse(arGroup,function(result){
-        var blob=new Blob([result],{type:'application/octet-stream'});
-        var url=URL.createObjectURL(blob);
+        var bytes=new Uint8Array(result);
+        var bin=''; for(var i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+        var url='data:model/gltf-binary;base64,'+btoa(bin);
         callback(url);
     },{binary:true, forceIndices:true, truncateDrawRange:false});
 }
@@ -4665,9 +4666,7 @@ function launchAR(){
 function closeAR(){
     document.getElementById('ar-overlay').style.display='none';
     var viewer=document.getElementById('ar-viewer');
-    var oldSrc=viewer.getAttribute('src');
     viewer.removeAttribute('src');
-    if(oldSrc && oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
 }
 </script>
 </body>
