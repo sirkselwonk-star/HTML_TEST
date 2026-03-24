@@ -4615,7 +4615,7 @@ function exportPivotToGLB(callback){
             var rc=document.createElement('canvas'); rc.width=sz; rc.height=sz;
             var rx=rc.getContext('2d');
             rx.translate(sz/2,sz/2);
-            rx.rotate(-Math.PI/2);
+            rx.rotate(Math.PI/2);
             rx.drawImage(origImg,-sz/2,-sz/2,sz,sz);
             var rotImg=new Image(); rotImg.src=rc.toDataURL('image/png');
             mats[1].map.image=rotImg;
