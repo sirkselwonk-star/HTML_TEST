@@ -4689,8 +4689,6 @@ function prepareAR(){
     exportPivotToGLB(function(glbUrl){
         if(gen!==arGen) return; /* stale export — discard */
         viewer.setAttribute('src',glbUrl);
-        /* Fallback: mark ready after 7s even if load event doesn't fire */
-        setTimeout(function(){ markReady(); },7000);
     });
 }
 /* Invalidate pre-loaded AR when navigating to a different coin */
