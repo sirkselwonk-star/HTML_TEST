@@ -4664,32 +4664,38 @@ function exportPivotToGLB(callback){
 /* Pre-export GLB in background so AR launches instantly */
 var arReady=false;
 var arPending=false; /* true while export/load is in progress */
+var arGen=0; /* generation counter — stale callbacks become no-ops */
 function prepareAR(){
     if(arReady||arPending) return;
     arPending=true;
+    var gen=++arGen;
     var btn=document.getElementById('ar-btn');
     btn.classList.add('ar-show');
     btn.textContent='PREPARING AR\u2026';
     btn.disabled=true;
     var viewer=document.getElementById('ar-viewer');
+    /* Attach listener BEFORE setting src to avoid race on first load */
+    function markReady(){
+        if(gen!==arGen) return; /* stale — a newer prepare/invalidate happened */
+        if(arReady) return;
+        arReady=true; arPending=false;
+        btn.textContent='\u{1f4f1} VIEW IN AR';
+        btn.disabled=false;
+    }
+    viewer.addEventListener('load',function onLoad(){
+        viewer.removeEventListener('load',onLoad);
+        markReady();
+    });
     exportPivotToGLB(function(glbUrl){
+        if(gen!==arGen) return; /* stale export — discard */
         viewer.setAttribute('src',glbUrl);
-        viewer.addEventListener('load',function onLoad(){
-            viewer.removeEventListener('load',onLoad);
-            arReady=true; arPending=false;
-            btn.textContent='\u{1f4f1} VIEW IN AR';
-            btn.disabled=false;
-        });
         /* Fallback: mark ready after 7s even if load event doesn't fire */
-        setTimeout(function(){
-            if(!arReady){ arReady=true; arPending=false;
-                btn.textContent='\u{1f4f1} VIEW IN AR'; btn.disabled=false; }
-        },7000);
+        setTimeout(function(){ markReady(); },7000);
     });
 }
 /* Invalidate pre-loaded AR when navigating to a different coin */
 function invalidateAR(){
-    arReady=false; arPending=false;
+    arReady=false; arPending=false; ++arGen;
     var viewer=document.getElementById('ar-viewer');
     viewer.removeAttribute('src');
     var btn=document.getElementById('ar-btn');
