@@ -4674,8 +4674,8 @@ function launchAR(){
         if(viewer.canActivateAR) viewer.activateAR();
     }
 
-    /* Fallback: proceed after 3s no matter what */
-    setTimeout(showAR,3000);
+    /* Fallback: proceed after 7s no matter what */
+    setTimeout(showAR,7000);
 
     exportPivotToGLB(function(glbUrl){
         viewer.setAttribute('src',glbUrl);
