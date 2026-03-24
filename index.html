@@ -4689,6 +4689,11 @@ function prepareAR(){
     exportPivotToGLB(function(glbUrl){
         if(gen!==arGen) return; /* stale export — discard */
         viewer.setAttribute('src',glbUrl);
+        /* Fallback: poll viewer.loaded every 500ms in case load event doesn't fire */
+        var poll=setInterval(function(){
+            if(gen!==arGen){ clearInterval(poll); return; }
+            if(viewer.loaded){ clearInterval(poll); markReady(); }
+        },500);
     });
 }
 /* Invalidate pre-loaded AR when navigating to a different coin */
