@@ -3371,7 +3371,8 @@ function renderPage(page){
     document.querySelectorAll('.pg-prev').forEach(function(el){el.disabled=(currentPage===0);});
     document.querySelectorAll('.pg-next').forEach(function(el){el.disabled=(currentPage===totalPages-1);});
     checkPageForSale();
-    grid.scrollIntoView({behavior:'smooth',block:'start'});
+    if(renderPage.inited) grid.scrollIntoView({behavior:'smooth',block:'start'});
+    renderPage.inited=true;
 }
 function goPage(p){renderPage(p);}
 
