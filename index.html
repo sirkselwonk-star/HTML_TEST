@@ -4558,9 +4558,6 @@ function exportBatchItem(idx,format,dirHandle,onDone){
 
 /* ===== AR — Export scene to GLB & launch model-viewer ===== */
 function exportPivotToGLB(callback){
-    /* Clone the pivot group so we don't mutate the live scene */
-    var arGroup=new THREE.Group();
-
     /* Deep-clone pivot (panel + frame + coins + ring + glass) */
     var pivotClone=pivot.clone(true);
 
@@ -4611,16 +4608,16 @@ function exportPivotToGLB(callback){
         });
     });
 
-    /* Name the node BEFORE creating tracks that reference it */
+    /* --- Bake rotation + bob animation into the GLB ---
+       Export pivotClone directly as the root so animation tracks
+       target the root node (r128 GLTFExporter reliably resolves root).
+       model-viewer provides its own lighting so no baked lights needed. */
+
     pivotClone.name='CoinPivot';
 
-    /* --- Bake rotation + bob animation into the GLB ---
-       Both must be baked because AR runtimes (Scene Viewer, Quick Look)
-       ignore model-viewer attributes and only play embedded glTF animations. */
-
-    var animDuration=9; /* ~9s loop (close to original 2π/0.7 ≈ 8.98) */
+    var animDuration=9; /* ~9s loop */
     var steps=48;
-    var bobAmp=0.12; /* visible at AR scale */
+    var bobAmp=0.12;
     var baseY=pivotClone.position.y;
 
     /* Bob: Y-position sine wave */
@@ -4657,14 +4654,7 @@ function exportPivotToGLB(callback){
     );
 
     var clip=new THREE.AnimationClip('Action',animDuration,[bobTrack,spinTrack]);
-    arGroup.animations=[clip];
-
-    arGroup.add(pivotClone);
-
-    var arAmb=new THREE.AmbientLight(0xffffff,0.8);
-    var arKey=new THREE.DirectionalLight(0xffffff,1.0);
-    arKey.position.set(2,3,4);
-    arGroup.add(arAmb,arKey);
+    pivotClone.animations=[clip];
 
     /* Wait for all baked images to decode before running the exporter */
     var loaded=0;
@@ -4689,7 +4679,7 @@ function exportPivotToGLB(callback){
             }
         });
         var exporter=new THREE.GLTFExporter();
-        exporter.parse(arGroup,function(result){
+        exporter.parse(pivotClone,function(result){
         /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
         var bytes=new Uint8Array(result);
         var chunks=[]; var chunkSz=8192;
@@ -4698,7 +4688,7 @@ function exportPivotToGLB(callback){
         }
         var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
         callback(url);
-    },{binary:true, forceIndices:true, truncateDrawRange:false, animations:arGroup.animations});
+    },{binary:true, forceIndices:true, truncateDrawRange:false, animations:pivotClone.animations});
     }
     if(pendingImgs.length===0){ onAllReady(); return; }
     function checkDone(){ loaded++; if(loaded>=pendingImgs.length) onAllReady(); }
