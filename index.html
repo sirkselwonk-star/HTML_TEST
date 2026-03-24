@@ -4654,7 +4654,13 @@ function exportPivotToGLB(callback){
     );
 
     var clip=new THREE.AnimationClip('Action',animDuration,[bobTrack,spinTrack]);
-    pivotClone.animations=[clip];
+
+    /* Wrap pivotClone in a Scene so the exporter registers it in nodeMap.
+       When a bare Group is passed as root, r128 GLTFExporter may not add
+       the root itself to nodeMap, causing animation track→node resolution
+       to fail silently (nodeMap.get() returns undefined → animation dropped). */
+    var exportScene=new THREE.Scene();
+    exportScene.add(pivotClone);
 
     /* Wait for all baked images to decode before running the exporter */
     var loaded=0;
@@ -4679,7 +4685,7 @@ function exportPivotToGLB(callback){
             }
         });
         var exporter=new THREE.GLTFExporter();
-        exporter.parse(pivotClone,function(result){
+        exporter.parse(exportScene,function(result){
         /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
         var bytes=new Uint8Array(result);
         var chunks=[]; var chunkSz=8192;
@@ -4688,7 +4694,7 @@ function exportPivotToGLB(callback){
         }
         var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
         callback(url);
-    },{binary:true, forceIndices:true, truncateDrawRange:false, animations:pivotClone.animations});
+    },{binary:true, forceIndices:true, truncateDrawRange:false, animations:[clip]});
     }
     if(pendingImgs.length===0){ onAllReady(); return; }
     function checkDone(){ loaded++; if(loaded>=pendingImgs.length) onAllReady(); }
