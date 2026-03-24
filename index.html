@@ -4592,6 +4592,8 @@ function exportPivotToGLB(callback){
                 newTex.flipY=tex.flipY;
                 newTex.wrapS=tex.wrapS;
                 newTex.wrapT=tex.wrapT;
+                newTex.offset.copy(tex.offset);
+                newTex.repeat.copy(tex.repeat);
                 newTex.rotation=0;
                 newTex.center.set(0.5,0.5);
                 newTex.needsUpdate=true;
@@ -4601,13 +4603,23 @@ function exportPivotToGLB(callback){
         });
     });
 
-    /* Rotate coin face texture 90° CW in the AR export */
+    /* Bake coin face texture rotation into pixels so offset stays correct.
+       The live scene uses cfRot=-1.57 to compensate for cylinder orientation;
+       after zeroing that we need 90° CW baked into the image itself. */
     pivotClone.traverse(function(child){
         if(!child.isMesh || !child.material) return;
         var mats=Array.isArray(child.material)?child.material:[child.material];
-        if(mats.length===3 && mats[1].map){
-            mats[1].map.rotation=-Math.PI/2;
-            mats[1].map.center.set(0.5,0.5);
+        if(mats.length===3 && mats[1].map && mats[1].map.image){
+            var origImg=mats[1].map.image;
+            var sz=origImg.width||origImg.naturalWidth||512;
+            var rc=document.createElement('canvas'); rc.width=sz; rc.height=sz;
+            var rx=rc.getContext('2d');
+            rx.translate(sz/2,sz/2);
+            rx.rotate(-Math.PI/2);
+            rx.drawImage(origImg,-sz/2,-sz/2,sz,sz);
+            var rotImg=new Image(); rotImg.src=rc.toDataURL('image/png');
+            mats[1].map.image=rotImg;
+            mats[1].map.rotation=0;
             mats[1].map.needsUpdate=true;
         }
     });
