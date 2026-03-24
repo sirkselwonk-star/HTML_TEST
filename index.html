@@ -103,7 +103,7 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   transition:background .2s,border-color .2s}
 #ar-btn:hover{background:rgba(74,222,128,.3);border-color:var(--green2)}
 @media (hover:none),(pointer:coarse){
-  #ar-btn{display:block}
+  #ar-btn.ar-show{display:block}
 }
 #ctrl-panel{position:fixed;top:18px;left:18px;z-index:10002;display:none}
 #ctrl-toggle{background:rgba(1,15,3,.75);border:1px solid var(--border-md);border-radius:6px;
@@ -4667,6 +4667,7 @@ function prepareAR(){
     if(arReady||arPending) return;
     arPending=true;
     var btn=document.getElementById('ar-btn');
+    btn.classList.add('ar-show');
     btn.textContent='PREPARING AR\u2026';
     btn.disabled=true;
     var viewer=document.getElementById('ar-viewer');
@@ -4691,6 +4692,7 @@ function invalidateAR(){
     var viewer=document.getElementById('ar-viewer');
     viewer.removeAttribute('src');
     var btn=document.getElementById('ar-btn');
+    btn.classList.remove('ar-show');
     btn.textContent='\u{1f4f1} VIEW IN AR';
     btn.disabled=true;
 }
