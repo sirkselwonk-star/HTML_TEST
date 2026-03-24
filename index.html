@@ -4634,9 +4634,13 @@ function exportPivotToGLB(callback){
 
     var exporter=new THREE.GLTFExporter();
     exporter.parse(arGroup,function(result){
+        /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
         var bytes=new Uint8Array(result);
-        var bin=''; for(var i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
-        var url='data:model/gltf-binary;base64,'+btoa(bin);
+        var chunks=[]; var chunkSz=8192;
+        for(var i=0;i<bytes.length;i+=chunkSz){
+            chunks.push(String.fromCharCode.apply(null,bytes.subarray(i,i+chunkSz)));
+        }
+        var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
         callback(url);
     },{binary:true, forceIndices:true, truncateDrawRange:false});
 }
@@ -4646,24 +4650,28 @@ function launchAR(){
     btn.textContent='EXPORTING…';
     btn.disabled=true;
 
+    var activated=false;
+    var viewer=document.getElementById('ar-viewer');
+    function showAR(){
+        if(activated) return;
+        activated=true;
+        document.getElementById('ar-overlay').style.display='block';
+        btn.textContent='\u{1f4f1} VIEW IN AR';
+        btn.disabled=false;
+        if(viewer.canActivateAR) viewer.activateAR();
+    }
+
+    /* Fallback: proceed after 3s no matter what */
+    setTimeout(showAR,3000);
+
     exportPivotToGLB(function(glbUrl){
-        var viewer=document.getElementById('ar-viewer');
-        var activated=false;
-        function showAR(){
-            if(activated) return;
-            activated=true;
-            document.getElementById('ar-overlay').style.display='block';
-            btn.textContent='\u{1f4f1} VIEW IN AR';
-            btn.disabled=false;
-            if(viewer.canActivateAR) viewer.activateAR();
-        }
         viewer.setAttribute('src',glbUrl);
         viewer.addEventListener('load',function onLoad(){
             viewer.removeEventListener('load',onLoad);
             showAR();
         });
-        /* Fallback: proceed after 2s even if load event doesn't fire */
-        setTimeout(showAR,2000);
+        /* Fallback after src is set: proceed after 1s */
+        setTimeout(showAR,1000);
     });
 }
 
