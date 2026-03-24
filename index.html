@@ -4580,11 +4580,25 @@ function exportPivotToGLB(callback){
                 newTex.flipY=tex.flipY;
                 newTex.wrapS=tex.wrapS;
                 newTex.wrapT=tex.wrapT;
+                newTex.rotation=tex.rotation||0;
+                newTex.center.copy(tex.center);
                 newTex.needsUpdate=true;
                 mat[k]=newTex;
             });
             mat.needsUpdate=true;
         });
+    });
+
+    /* Fix back-coin back-face texture rotation (45° CW correction) */
+    pivotClone.traverse(function(child){
+        if(!child.isMesh || !child.material) return;
+        var mats=Array.isArray(child.material)?child.material:[child.material];
+        /* backMat is the 6th material (index 5) on the panel mesh */
+        if(mats.length===6 && mats[5].map){
+            mats[5].map.rotation=(mats[5].map.rotation||0)+(-Math.PI/4);
+            mats[5].map.center.set(0.5,0.5);
+            mats[5].map.needsUpdate=true;
+        }
     });
 
     arGroup.add(pivotClone);
