@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.1,user-scalable=yes">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -946,29 +946,10 @@ select.ctrl-select:focus{border-color:var(--green)}
 </div>
 
 <script>
-/* ===== ZOOM LIMIT (mobile) ===== */
-(function(){
-    var MAX_ZOOM=1.1;
-    var last=1;
-    window.addEventListener('touchend',function(){
-        var z=window.visualViewport?window.visualViewport.scale:
-            (window.outerWidth/window.innerWidth);
-        if(z>MAX_ZOOM){
-            var vp=document.querySelector('meta[name=viewport]');
-            vp.content='width=device-width,initial-scale=1.0,maximum-scale=1.1,user-scalable=yes';
-        }
-    },{passive:true});
-    if(window.visualViewport){
-        window.visualViewport.addEventListener('resize',function(){
-            if(window.visualViewport.scale>MAX_ZOOM){
-                document.body.style.transform='scale('+MAX_ZOOM/window.visualViewport.scale+')';
-                document.body.style.transformOrigin='0 0';
-            }else{
-                document.body.style.transform='';
-            }
-        });
-    }
-})();
+/* ===== BLOCK PINCH-ZOOM (mobile) ===== */
+document.addEventListener('touchmove',function(e){
+    if(e.touches.length>1) e.preventDefault();
+},{passive:false});
 /* ===== COLOR THEMES ===== */
 var COLOR_THEMES={
   green:{
