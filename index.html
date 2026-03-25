@@ -50,9 +50,10 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
   gap:12px;padding:28px 20px 60px;max-width:1800px;margin:0 auto}
 .card{position:relative;border-radius:5px;overflow:hidden;cursor:pointer;
   background:var(--card);border:1px solid var(--border-dk);
+  box-shadow:0 0 12px rgba(var(--neon-glow),.12);
   transition:transform .2s,border-color .2s,box-shadow .2s}
 .card:hover{transform:translateY(-4px) scale(1.02);border-color:var(--green);
-  box-shadow:0 8px 32px rgba(var(--neon-glow),.22);z-index:1}
+  box-shadow:0 4px 24px rgba(var(--neon-glow),.3);z-index:1}
 .card img{display:block;width:100%;aspect-ratio:1;object-fit:cover;transition:opacity .2s}
 .card:hover img{opacity:.85}
 .card-label{position:absolute;bottom:0;left:0;right:0;padding:26px 8px 8px;
@@ -168,8 +169,8 @@ select.ctrl-select:focus{border-color:var(--green)}
   #sq-neon-hud{inset:8px}
   #ctrl-panel{}
   .card-label{opacity:1}
-  .card:hover{transform:none;box-shadow:none;border-color:var(--border-dk)}
-  .card:active{border-color:var(--green);box-shadow:0 4px 16px rgba(var(--neon-glow),.15)}
+  .card:hover{transform:none;box-shadow:0 0 12px rgba(var(--neon-glow),.12);border-color:var(--border-dk)}
+  .card:active{border-color:var(--green);box-shadow:0 4px 20px rgba(var(--neon-glow),.35)}
   .card:hover img{opacity:1}
 }
 /* Portrait mobile + desktop: NFT name at top, rarity+coin at bottom */
