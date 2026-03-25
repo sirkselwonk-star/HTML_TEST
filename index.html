@@ -9,6 +9,10 @@
 <title>SLIME &mdash; 3D NFT Gallery</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+<!-- GLTFExporter for AR GLB export -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+<!-- model-viewer for AR display -->
+<script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -92,6 +96,15 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
 #lb-loader.show{opacity:1}
 #sq-neon-hud{position:absolute;pointer-events:none;z-index:10001;border:2px solid var(--green);
   box-shadow:0 0 18px var(--green),inset 0 0 9px var(--green);border-radius:4px;inset:20px}
+#ar-btn{display:none;position:fixed;bottom:22px;right:18px;z-index:10002;
+  background:rgba(74,222,128,.15);border:1px solid var(--green);border-radius:8px;
+  padding:10px 22px;color:var(--green2);cursor:pointer;font-size:.72rem;font-weight:600;
+  letter-spacing:.15em;text-transform:uppercase;backdrop-filter:blur(8px);
+  transition:background .2s,border-color .2s}
+#ar-btn:hover{background:rgba(74,222,128,.3);border-color:var(--green2)}
+@media (hover:none),(pointer:coarse){
+  #ar-btn.ar-show{display:block}
+}
 #ctrl-panel{position:fixed;top:18px;left:18px;z-index:10002;display:none}
 #ctrl-toggle{background:rgba(1,15,3,.75);border:1px solid var(--border-md);border-radius:6px;
   padding:5px 13px;color:var(--muted);cursor:pointer;font-size:.61rem;letter-spacing:.2em;
@@ -267,6 +280,7 @@ select.ctrl-select:focus{border-color:var(--green)}
   <button id="lb-close" onclick="close3d()">&times;</button>
   <button class="nav-btn" id="lb-prev" onclick="nav(-1)">&#8592;</button>
   <button class="nav-btn" id="lb-next" onclick="nav(1)">&#8594;</button>
+  <button id="ar-btn" onclick="launchAR()">&#x1f4f1; VIEW IN AR</button>
   <div id="lb-title-wrap">
     <div id="lb-title-group">
       <div id="lb-title"></div>
@@ -896,6 +910,31 @@ select.ctrl-select:focus{border-color:var(--green)}
       </div>
     </div>
   </div>
+</div>
+
+<!-- AR Overlay -->
+<div id="ar-overlay" style="display:none;position:fixed;inset:0;z-index:20000;background:#000">
+  <model-viewer id="ar-viewer"
+    ar ar-modes="webxr scene-viewer quick-look"
+    ar-scale="fixed"
+    scale="0.4 0.4 0.4"
+    camera-controls touch-action="pan-y"
+    auto-rotate rotation-per-second="36deg"
+    shadow-intensity="1" shadow-softness="1"
+    environment-image="neutral"
+    style="width:100%;height:100%;background:#000">
+    <button slot="ar-button" id="ar-activate"
+      style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+        background:rgba(74,222,128,.9);color:#010f03;border:none;border-radius:8px;
+        padding:14px 28px;font-size:1rem;font-weight:700;letter-spacing:.08em;cursor:pointer">
+      PLACE IN ROOM
+    </button>
+  </model-viewer>
+  <button id="ar-close" onclick="closeAR()"
+    style="position:absolute;top:16px;right:16px;z-index:20001;
+      background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.3);border-radius:50%;
+      width:44px;height:44px;color:#fff;font-size:1.5rem;cursor:pointer;
+      display:flex;align-items:center;justify-content:center">&times;</button>
 </div>
 
 <script>
@@ -2767,7 +2806,8 @@ function open3d(i){
     renderer.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix();
     syncPanelY(); positionTitleBar(); updateCtrlBodyMaxHeight();
     startGoopAnim();
-    loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();}});
+    invalidateAR();
+    loadNFT(cur,function(){updateInfo();if(!animating){animating=true;animate();} prepareAR();});
     setTimeout(function(){lb.classList.add('active');},10);
     if(isTouchDevice()&&isLandscape())tryFullscreen();
 }
@@ -2783,7 +2823,8 @@ function close3d(){
 function nav(dir){
     cur=(cur+dir+images.length)%images.length;
     rotY+=dir*0.6;
-    loadNFT(cur,updateInfo);
+    invalidateAR();
+    loadNFT(cur,function(){updateInfo(); prepareAR();});
 }
 function updateInfo(){
     document.getElementById('lb-title').textContent=images[cur].title;
@@ -3333,7 +3374,8 @@ function renderPage(page){
     document.querySelectorAll('.pg-prev').forEach(function(el){el.disabled=(currentPage===0);});
     document.querySelectorAll('.pg-next').forEach(function(el){el.disabled=(currentPage===totalPages-1);});
     checkPageForSale();
-    grid.scrollIntoView({behavior:'smooth',block:'start'});
+    if(renderPage.inited) grid.scrollIntoView({behavior:'smooth',block:'start'});
+    renderPage.inited=true;
 }
 function goPage(p){renderPage(p);}
 
@@ -4513,6 +4555,160 @@ function exportBatchItem(idx,format,dirHandle,onDone){
         setTimeout(renderFrame,Math.round(1000/FPS));
     }
     recorder.start(); renderFrame();
+}
+
+/* ===== AR — Export scene to GLB & launch model-viewer ===== */
+function exportPivotToGLB(callback){
+    /* Clone the pivot group so we don't mutate the live scene */
+    var arGroup=new THREE.Group();
+
+    /* Deep-clone pivot (panel + frame + coins + ring + glass) */
+    var pivotClone=pivot.clone(true);
+
+    /* Deep-clone materials so we never mutate the live scene.
+       pivot.clone(true) shares materials by reference in r128. */
+    pivotClone.traverse(function(child){
+        if(!child.isMesh || !child.material) return;
+        if(Array.isArray(child.material)){
+            child.material=child.material.map(function(m){return m.clone();});
+        } else {
+            child.material=child.material.clone();
+        }
+    });
+
+    /* Convert CanvasTextures to img-backed Textures so GLTFExporter
+       can embed them as PNG in the GLB. Zero out texture rotations —
+       in the live scene these compensate for cylinder mesh rotation,
+       but GLTFExporter bakes mesh transforms into geometry.
+       Collect all created <img> elements so we can wait for them. */
+    var pendingImgs=[];
+    pivotClone.traverse(function(child){
+        if(!child.isMesh || !child.material) return;
+        var mats=Array.isArray(child.material)?child.material:[child.material];
+        mats.forEach(function(mat){
+            ['map','emissiveMap','normalMap','roughnessMap','metalnessMap'].forEach(function(k){
+                var tex=mat[k];
+                if(!tex || !tex.image) return;
+                var src=tex.image;
+                var c=document.createElement('canvas');
+                c.width=src.width||src.naturalWidth||512;
+                c.height=src.height||src.naturalHeight||512;
+                c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+                var img=new Image();
+                pendingImgs.push(img);
+                img.src=c.toDataURL('image/png');
+                var newTex=new THREE.Texture(img);
+                newTex.flipY=tex.flipY;
+                newTex.wrapS=tex.wrapS;
+                newTex.wrapT=tex.wrapT;
+                newTex.offset.copy(tex.offset);
+                newTex.repeat.copy(tex.repeat);
+                newTex.rotation=0;
+                newTex.center.set(0.5,0.5);
+                newTex.needsUpdate=true;
+                mat[k]=newTex;
+            });
+            mat.needsUpdate=true;
+        });
+    });
+
+    arGroup.add(pivotClone);
+
+    var arAmb=new THREE.AmbientLight(0xffffff,0.8);
+    var arKey=new THREE.DirectionalLight(0xffffff,1.0);
+    arKey.position.set(2,3,4);
+    arGroup.add(arAmb,arKey);
+
+    /* Wait for all baked images to decode before running the exporter */
+    var loaded=0;
+    function onAllReady(){
+        /* Bake coin face texture rotation into pixels now that all images are loaded */
+        pivotClone.traverse(function(child){
+            if(!child.isMesh || !child.material) return;
+            var mats=Array.isArray(child.material)?child.material:[child.material];
+            if(mats.length===3 && mats[1].map && mats[1].map.image){
+                var origImg=mats[1].map.image;
+                var sz=origImg.width||origImg.naturalWidth||512;
+                var rc=document.createElement('canvas'); rc.width=sz; rc.height=sz;
+                var rx=rc.getContext('2d');
+                rx.translate(sz/2,sz/2);
+                rx.rotate(Math.PI/2);
+                rx.drawImage(origImg,-sz/2,-sz/2,sz,sz);
+                var rotImg=new Image();
+                rotImg.src=rc.toDataURL('image/png');
+                mats[1].map.image=rotImg;
+                mats[1].map.rotation=0;
+                mats[1].map.needsUpdate=true;
+            }
+        });
+        var exporter=new THREE.GLTFExporter();
+        exporter.parse(arGroup,function(result){
+        /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
+        var bytes=new Uint8Array(result);
+        var chunks=[]; var chunkSz=8192;
+        for(var i=0;i<bytes.length;i+=chunkSz){
+            chunks.push(String.fromCharCode.apply(null,bytes.subarray(i,i+chunkSz)));
+        }
+        var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
+        callback(url);
+    },{binary:true, forceIndices:true, truncateDrawRange:false});
+    }
+    if(pendingImgs.length===0){ onAllReady(); return; }
+    function checkDone(){ loaded++; if(loaded>=pendingImgs.length) onAllReady(); }
+    for(var pi=0;pi<pendingImgs.length;pi++){
+        if(pendingImgs[pi].complete) checkDone();
+        else { pendingImgs[pi].onload=checkDone; pendingImgs[pi].onerror=checkDone; }
+    }
+}
+
+/* Pre-export GLB in background so AR launches instantly */
+var arReady=false;
+var arPending=false; /* true while export/load is in progress */
+var arGen=0; /* generation counter — stale callbacks become no-ops */
+function prepareAR(){
+    if(arReady||arPending) return;
+    arPending=true;
+    var gen=++arGen;
+    var btn=document.getElementById('ar-btn');
+    btn.classList.add('ar-show');
+    btn.textContent='PREPARING AR\u2026';
+    btn.disabled=true;
+    var viewer=document.getElementById('ar-viewer');
+    /* Attach listener BEFORE setting src to avoid race on first load */
+    function markReady(){
+        if(gen!==arGen) return; /* stale — a newer prepare/invalidate happened */
+        if(arReady) return;
+        arReady=true; arPending=false;
+        btn.textContent='\u{1f4f1} VIEW IN AR';
+        btn.disabled=false;
+    }
+    exportPivotToGLB(function(glbUrl){
+        if(gen!==arGen) return; /* stale export — discard */
+        viewer.setAttribute('src',glbUrl);
+        /* GLB is a blob URL already in memory — mark ready immediately */
+        markReady();
+    });
+}
+/* Invalidate pre-loaded AR when navigating to a different coin */
+function invalidateAR(){
+    arReady=false; arPending=false; ++arGen;
+    var viewer=document.getElementById('ar-viewer');
+    viewer.removeAttribute('src');
+    var btn=document.getElementById('ar-btn');
+    btn.classList.remove('ar-show');
+    btn.textContent='\u{1f4f1} VIEW IN AR';
+    btn.disabled=true;
+}
+
+function launchAR(){
+    if(!arReady) return; /* button should be disabled, but guard anyway */
+    document.getElementById('ar-overlay').style.display='block';
+    var viewer=document.getElementById('ar-viewer');
+    if(viewer.canActivateAR) viewer.activateAR();
+}
+
+function closeAR(){
+    document.getElementById('ar-overlay').style.display='none';
 }
 </script>
 </body>
