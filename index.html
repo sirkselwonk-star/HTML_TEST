@@ -4622,7 +4622,9 @@ function exportPivotToGLB(callback){
     /* Wait for all baked images to decode before running the exporter */
     var loaded=0;
     function onAllReady(){
-        /* Bake coin face texture rotation into pixels now that all images are loaded */
+        /* Bake coin face texture rotation into pixels now that all images are loaded.
+           Collect any newly-created rotation images so we can wait for them. */
+        var rotImgs=[];
         pivotClone.traverse(function(child){
             if(!child.isMesh || !child.material) return;
             var mats=Array.isArray(child.material)?child.material:[child.material];
@@ -4636,22 +4638,33 @@ function exportPivotToGLB(callback){
                 rx.drawImage(origImg,-sz/2,-sz/2,sz,sz);
                 var rotImg=new Image();
                 rotImg.src=rc.toDataURL('image/png');
+                rotImgs.push(rotImg);
                 mats[1].map.image=rotImg;
                 mats[1].map.rotation=0;
                 mats[1].map.needsUpdate=true;
             }
         });
-        var exporter=new THREE.GLTFExporter();
-        exporter.parse(arGroup,function(result){
-        /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
-        var bytes=new Uint8Array(result);
-        var chunks=[]; var chunkSz=8192;
-        for(var i=0;i<bytes.length;i+=chunkSz){
-            chunks.push(String.fromCharCode.apply(null,bytes.subarray(i,i+chunkSz)));
+        function runExporter(){
+            var exporter=new THREE.GLTFExporter();
+            exporter.parse(arGroup,function(result){
+            /* Convert ArrayBuffer to base64 in chunks (faster on mobile) */
+            var bytes=new Uint8Array(result);
+            var chunks=[]; var chunkSz=8192;
+            for(var i=0;i<bytes.length;i+=chunkSz){
+                chunks.push(String.fromCharCode.apply(null,bytes.subarray(i,i+chunkSz)));
+            }
+            var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
+            callback(url);
+        },{binary:true, forceIndices:true, truncateDrawRange:false});
         }
-        var url='data:model/gltf-binary;base64,'+btoa(chunks.join(''));
-        callback(url);
-    },{binary:true, forceIndices:true, truncateDrawRange:false});
+        /* Wait for rotation-baked images to decode before exporting */
+        var rotLoaded=0;
+        if(rotImgs.length===0){ runExporter(); return; }
+        function rotCheck(){ rotLoaded++; if(rotLoaded>=rotImgs.length) runExporter(); }
+        for(var ri=0;ri<rotImgs.length;ri++){
+            if(rotImgs[ri].complete) rotCheck();
+            else { rotImgs[ri].onload=rotCheck; rotImgs[ri].onerror=rotCheck; }
+        }
     }
     if(pendingImgs.length===0){ onAllReady(); return; }
     function checkDone(){ loaded++; if(loaded>=pendingImgs.length) onAllReady(); }
