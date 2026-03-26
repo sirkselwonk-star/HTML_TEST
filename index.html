@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -43,6 +43,51 @@ header h1{display:flex;justify-content:center;animation:neon-flicker 4s infinite
     drop-shadow(0 0 7px #fff) drop-shadow(0 0 21px #fff)
     drop-shadow(0 0 42px var(--neon)) drop-shadow(0 0 82px var(--neon)) drop-shadow(0 0 120px var(--neon))}
 header h1 svg{height:clamp(4rem,13vw,7.9rem);width:auto}
+@keyframes tie-dye-swirl{
+  0%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(4px -3px 18px #ff0088) drop-shadow(-4px 3px 18px #00e5ff)
+    drop-shadow(0 -4px 22px #ffee00) drop-shadow(0 4px 22px #bf00ff)
+    drop-shadow(0 0 60px #ff0088) drop-shadow(0 0 100px #bf00ff)}
+  25%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(3px 4px 18px #00e5ff) drop-shadow(-3px -4px 18px #ffee00)
+    drop-shadow(4px 0 22px #bf00ff) drop-shadow(-4px 0 22px #ff0088)
+    drop-shadow(0 0 60px #00e5ff) drop-shadow(0 0 100px #ff0088)}
+  50%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(-4px 3px 18px #ffee00) drop-shadow(4px -3px 18px #bf00ff)
+    drop-shadow(0 4px 22px #ff0088) drop-shadow(0 -4px 22px #00e5ff)
+    drop-shadow(0 0 60px #ffee00) drop-shadow(0 0 100px #00e5ff)}
+  75%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(-3px -4px 18px #bf00ff) drop-shadow(3px 4px 18px #ff0088)
+    drop-shadow(-4px 0 22px #00e5ff) drop-shadow(4px 0 22px #ffee00)
+    drop-shadow(0 0 60px #bf00ff) drop-shadow(0 0 100px #ffee00)}
+  100%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(4px -3px 18px #ff0088) drop-shadow(-4px 3px 18px #00e5ff)
+    drop-shadow(0 -4px 22px #ffee00) drop-shadow(0 4px 22px #bf00ff)
+    drop-shadow(0 0 60px #ff0088) drop-shadow(0 0 100px #bf00ff)}
+}
+header h1.tie-dye{animation:tie-dye-swirl 6s linear infinite}
+@keyframes tie-dye-card{
+  0%{box-shadow:3px -2px 14px #ff0088,-3px 2px 14px #00e5ff,0 -3px 14px #ffee00,0 3px 14px #bf00ff}
+  25%{box-shadow:2px 3px 14px #00e5ff,-2px -3px 14px #ffee00,3px 0 14px #bf00ff,-3px 0 14px #ff0088}
+  50%{box-shadow:-3px 2px 14px #ffee00,3px -2px 14px #bf00ff,0 3px 14px #ff0088,0 -3px 14px #00e5ff}
+  75%{box-shadow:-2px -3px 14px #bf00ff,2px 3px 14px #ff0088,-3px 0 14px #00e5ff,3px 0 14px #ffee00}
+  100%{box-shadow:3px -2px 14px #ff0088,-3px 2px 14px #00e5ff,0 -3px 14px #ffee00,0 3px 14px #bf00ff}
+}
+@keyframes tie-dye-btn{
+  0%{filter:drop-shadow(2px -2px 6px #ff0088) drop-shadow(-2px 2px 6px #00e5ff) drop-shadow(0 -2px 8px #ffee00) drop-shadow(0 2px 8px #bf00ff)}
+  25%{filter:drop-shadow(-2px -2px 6px #00e5ff) drop-shadow(2px 2px 6px #ffee00) drop-shadow(2px 0 8px #bf00ff) drop-shadow(-2px 0 8px #ff0088)}
+  50%{filter:drop-shadow(-2px 2px 6px #ffee00) drop-shadow(2px -2px 6px #bf00ff) drop-shadow(0 2px 8px #ff0088) drop-shadow(0 -2px 8px #00e5ff)}
+  75%{filter:drop-shadow(2px 2px 6px #bf00ff) drop-shadow(-2px -2px 6px #ff0088) drop-shadow(-2px 0 8px #00e5ff) drop-shadow(2px 0 8px #ffee00)}
+  100%{filter:drop-shadow(2px -2px 6px #ff0088) drop-shadow(-2px 2px 6px #00e5ff) drop-shadow(0 -2px 8px #ffee00) drop-shadow(0 2px 8px #bf00ff)}
+}
+.tie-dye-cards .card{animation:tie-dye-card 6s linear infinite;border-color:rgba(255,0,136,.3)}
+.tie-dye-cards .card:hover{animation:tie-dye-card 3s linear infinite}
+.theme-btn.tie-dye-btn{animation:tie-dye-btn 6s linear infinite !important}
 header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28em;text-transform:uppercase}
 .badge{display:inline-block;margin-top:18px;padding:5px 18px;border:1px solid var(--green);
   border-radius:40px;font-size:.72rem;letter-spacing:.2em;color:var(--green);text-transform:uppercase}
@@ -945,6 +990,10 @@ select.ctrl-select:focus{border-color:var(--green)}
 </div>
 
 <script>
+/* ===== BLOCK PINCH-ZOOM (mobile) ===== */
+document.addEventListener('touchmove',function(e){
+    if(e.touches.length>1) e.preventDefault();
+},{passive:false});
 /* ===== COLOR THEMES ===== */
 var COLOR_THEMES={
   green:{
@@ -1070,6 +1119,15 @@ function applyColorTheme(name){
     b.classList.toggle('active',b.getAttribute('data-theme')===name);
   });
 
+  /* tie-dye swirl on pink theme */
+  var isPink=name==='pink';
+  var h1=document.querySelector('header h1');
+  if(h1) h1.classList.toggle('tie-dye',isPink);
+  var grid=document.querySelector('.grid');
+  if(grid) grid.classList.toggle('tie-dye-cards',isPink);
+  var pinkBtn=document.querySelector('.theme-btn[data-theme="pink"]');
+  if(pinkBtn) pinkBtn.classList.toggle('tie-dye-btn',isPink);
+
   /* ── 3D Scene updates (only if scene is initialized) ── */
   if(typeof ambient!=='undefined'){
     var hx=function(c){return '#'+new THREE.Color(c).getHexString();};
@@ -1123,6 +1181,10 @@ function applyColorTheme(name){
 
   /* slime wall static dot color — rebuild bg canvas */
   if(typeof updateSlimeWallBgColor==='function') updateSlimeWallBgColor(t.wallDot,t.backTexBg);
+
+  /* hide floor + mist on pink theme */
+  if(typeof floor!=='undefined') floor.visible=(name!=='pink');
+  if(typeof mistLayers!=='undefined') mistLayers.forEach(function(l){l.visible=name==='pink'?false:mistOn;});
 
   /* back-of-panel brand texture */
   if(typeof rebuildBackTex==='function') rebuildBackTex(t.backTex,t.backTexBg);
@@ -2286,6 +2348,9 @@ var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),
     new THREE.MeshStandardMaterial({color:0x010f03,roughness:.15}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; scene.add(floor);
 
+
+
+
 /* ── Scene FX globals ── */
 var slimeWallOn=true, slimeWallSpeedMult=1.0, slimeDripCount=14, slimeWallMesh=null;
 var mistOn=true, mistOpacity=0.08, mistSpeed=1.55, mistColorHex='#575757';
@@ -2336,6 +2401,36 @@ var updateSlimeWall=(function(){
     return function updateSlimeWall(now){
         if(!slimeWallOn){if(slimeWallMesh)slimeWallMesh.visible=false;return;}
         if(slimeWallMesh)slimeWallMesh.visible=true;
+
+        /* ── Tie-dye neon background (pink theme) ── */
+        if(currentTheme==='pink'){
+            var td=now*0.0002;
+            ctx.fillStyle='#100308'; ctx.fillRect(0,0,W,H);
+            var tdCols=[
+                [255,0,136],[0,229,255],[255,238,0],[191,0,255]
+            ];
+            for(var ci=0;ci<4;ci++){
+                var angle=td+ci*Math.PI*0.5;
+                var bx=W*0.5+Math.cos(angle)*W*0.3;
+                var by=H*0.5+Math.sin(angle*0.7)*H*0.35;
+                var r2=140+Math.sin(td*1.3+ci*2)*50;
+                var cc=tdCols[ci];
+                var rg=ctx.createRadialGradient(bx,by,0,bx,by,r2);
+                rg.addColorStop(0,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',1)');
+                rg.addColorStop(0.4,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',0.55)');
+                rg.addColorStop(1,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',0)');
+                ctx.globalCompositeOperation='screen';
+                ctx.fillStyle=rg;
+                ctx.fillRect(0,0,W,H);
+            }
+            ctx.globalCompositeOperation='source-over';
+            ctx.globalAlpha=0.12;
+            ctx.fillStyle='#100308'; ctx.fillRect(0,0,W,H);
+            ctx.globalAlpha=1.0;
+            tex.needsUpdate=true;
+            return;
+        }
+
         if(!dotGlowOn||!dotGlows.length){return;}
         /* blit static BG then draw animated glow dots */
         ctx.drawImage(bgC,0,0);
@@ -2872,6 +2967,7 @@ var t=0;
 function animate(){
     if(!animating)return;
     requestAnimationFrame(animate);
+    tickTieDye3D();
     t+=0.008;
     if(!isDragging){
         velY=velY*.95+0.00008; velX*=.95;
@@ -3021,6 +3117,40 @@ function applyRingMat(){
     ringLight.visible=ringOn&&ringLightOn;
     ringLight.intensity=ringLightInt;
     ringLight.distance=ringLightDist;
+}
+/* ── Tie-dye color cycling for pink theme (3D scene) ── */
+var tieDyeColors=[
+    new THREE.Color('#ff0088'),
+    new THREE.Color('#00e5ff'),
+    new THREE.Color('#ffee00'),
+    new THREE.Color('#bf00ff')
+];
+var tieDyeHudColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
+function tickTieDye3D(){
+    if(currentTheme!=='pink') return;
+
+    var now=performance.now()*0.001;
+    var speed=0.4;
+    var tn=now*speed;
+
+    /* Ring color cycling */
+    var ci=Math.floor(tn)%4;
+    var f=tn%1;
+    var mixed=new THREE.Color().lerpColors(tieDyeColors[ci],tieDyeColors[(ci+1)%4],f);
+    backRingMat.color.copy(mixed);
+    backRingMat.emissive.copy(mixed);
+    backRingMat.emissiveIntensity=1.2;
+    backRingMat.needsUpdate=true;
+    ringLight.color.copy(mixed);
+    ringLight.intensity=3.0;
+
+    /* HUD color cycling */
+    var hudIdx=Math.floor(tn*1.3)%4;
+    var el=document.getElementById('sq-neon-hud');
+    if(el&&sqNeonOn){
+        el.style.borderColor=tieDyeHudColors[hudIdx];
+        el.style.boxShadow='0 0 '+sqNeonGlow+'px '+tieDyeHudColors[hudIdx]+',inset 0 0 '+(sqNeonGlow/2)+'px '+tieDyeHudColors[(hudIdx+2)%4];
+    }
 }
 document.getElementById('ring-on').addEventListener('change',function(){ringOn=this.checked;applyRingMat();});
 document.getElementById('ring-col').addEventListener('input',function(){ringColorHex=this.value;applyRingMat();});
@@ -3211,11 +3341,13 @@ function rebuildGoops(){
   for(var i=0;i<GOOP_CFG.count;i++) goops.push(new GoopBlob(i,GOOP_CFG.count,W,H));
   if(GOOP_CFG.topBand) rebuildBandGoops();
 }
+
 function animateOoze(){
   if(!goopCanvas||!goopCtx){goopAnimId=null;return;}
   goopCtx.clearRect(0,0,goopCanvas.width,goopCanvas.height);
   if(GOOP_CFG.on) goops.forEach(function(g){g.update();g.draw(goopCtx);});
   if(GOOP_CFG.topBand) bandGoops.forEach(function(g){g.update();g.draw(goopCtx);});
+
   goopAnimId=requestAnimationFrame(animateOoze);
 }
 function startGoopAnim(){
@@ -3225,6 +3357,7 @@ function startGoopAnim(){
   goopCanvas.width=window.innerWidth;goopCanvas.height=window.innerHeight;
   goopCanvas.style.mixBlendMode=GOOP_CFG.blend;
   goopCanvas.style.zIndex=GOOP_CFG.zLayer;
+
   rebuildGoops();
   if(GOOP_CFG.topBand) rebuildBandGoops();
   animateOoze();
