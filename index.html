@@ -2921,6 +2921,7 @@ var t=0;
 function animate(){
     if(!animating)return;
     requestAnimationFrame(animate);
+    tickTieDye3D();
     t+=0.008;
     if(!isDragging){
         velY=velY*.95+0.00008; velX*=.95;
@@ -3070,6 +3071,34 @@ function applyRingMat(){
     ringLight.visible=ringOn&&ringLightOn;
     ringLight.intensity=ringLightInt;
     ringLight.distance=ringLightDist;
+}
+/* ── Tie-dye color cycling for pink theme (3D scene) ── */
+var tieDyeColors=[
+    new THREE.Color('#ff0088'),
+    new THREE.Color('#00e5ff'),
+    new THREE.Color('#ffee00'),
+    new THREE.Color('#bf00ff')
+];
+var tieDyeHudColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
+function tickTieDye3D(){
+    if(currentTheme!=='pink') return;
+    var speed=0.4;
+    var now=performance.now()*0.001*speed;
+    var i=Math.floor(now)%4;
+    var f=now%1;
+    var c1=tieDyeColors[i];
+    var c2=tieDyeColors[(i+1)%4];
+    var mixed=new THREE.Color().lerpColors(c1,c2,f);
+    backRingMat.color.copy(mixed);
+    backRingMat.emissive.copy(mixed);
+    backRingMat.needsUpdate=true;
+    ringLight.color.copy(mixed);
+    var hudIdx=Math.floor(now*1.3)%4;
+    var el=document.getElementById('sq-neon-hud');
+    if(el&&sqNeonOn){
+        el.style.borderColor=tieDyeHudColors[hudIdx];
+        el.style.boxShadow='0 0 '+sqNeonGlow+'px '+tieDyeHudColors[hudIdx]+',inset 0 0 '+(sqNeonGlow/2)+'px '+tieDyeHudColors[(hudIdx+2)%4];
+    }
 }
 document.getElementById('ring-on').addEventListener('change',function(){ringOn=this.checked;applyRingMat();});
 document.getElementById('ring-col').addEventListener('input',function(){ringColorHex=this.value;applyRingMat();});
