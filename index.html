@@ -2417,8 +2417,9 @@ var slimePts=[
         var anchors=[];
         for(var pi=0;pi<slimePts.length;pi++){
             var sp=slimePts[pi];
+            var yScale=6.0;
             var tx=f.cx+sp.x*f.scale;
-            var ty=f.cy+sp.y*f.scale;
+            var ty=f.cy+sp.y*f.scale*yScale;
             var tz=f.cz;
             var a={
                 ci:fi,partIndex:pi,groupIndex:fi,
@@ -3280,7 +3281,7 @@ function tickTieDye3D(){
         b._swingZ+=b._swingVelZ*dt;
         b._swingZ=Math.max(-0.35,Math.min(0.35,b._swingZ));
 
-        var tentLen=Math.abs(sp.y)*1.2;
+        var tentLen=Math.abs(sp.y)*1.2*6.0;
         b.px=body.px+sp.x*0.6+Math.sin(b._swingAngle)*tentLen;
         b.py=body.py-0.3-Math.cos(b._swingAngle)*tentLen;
         b.pz=body.pz+Math.sin(b._swingZ)*tentLen*0.5;
