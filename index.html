@@ -3153,8 +3153,46 @@ function tickTieDye3D(){
     var BX=3.0,BY=1.5,BZmin=-1.8,BZmax=-0.5;
     var GRAVITY=-0.15, BUOY=0.18, DRAG=0.985, REPEL=0.8;
 
+    /* Panel collision box — transform blob position into pivot local space */
+    var pivotY=panelYOffset+Math.sin(t*.7)*.03;
+    var cosY=Math.cos(-rotY),sinY=Math.sin(-rotY);
+    var cosX=Math.cos(-rotX),sinX=Math.sin(-rotX);
+    var PW=1.15,PH=1.15,PD=0.15; /* half-extents of panel collision box */
+
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++){
         var b=tieDyeBlobs3D[bi];
+
+        /* Panel collision: transform blob into pivot local coords */
+        var lx=b.px, ly=b.py-pivotY, lz=b.pz;
+        /* Rotate by -pivotY rotation */
+        var rx=lx*cosY-lz*sinY;
+        var rz=lx*sinY+lz*cosY;
+        /* Rotate by -pivotX rotation */
+        var ry=ly*cosX-rz*sinX;
+        var rz2=ly*sinX+rz*cosX;
+
+        /* Check if blob center is inside the expanded panel box */
+        var br=b.radius*0.8;
+        var penX=PW+br-Math.abs(rx);
+        var penY=PH+br-Math.abs(ry);
+        var penZ=PD+br-Math.abs(rz2);
+        if(penX>0&&penY>0&&penZ>0){
+            /* Push out along axis with smallest penetration */
+            var pushStr=2.5;
+            if(penZ<=penX&&penZ<=penY){
+                var signZ=rz2>0?1:-1;
+                b.pz+=signZ*penZ*0.3;
+                b.vz+=signZ*pushStr*dt;
+            }else if(penX<=penY){
+                var signX=rx>0?1:-1;
+                b.px+=signX*penX*0.3;
+                b.vx+=signX*pushStr*dt;
+            }else{
+                var signY=ry>0?1:-1;
+                b.py+=signY*penY*0.3;
+                b.vy+=signY*pushStr*dt;
+            }
+        }
 
         /* Gentle gravity + buoyancy (floaty, slightly upward bias) */
         b.vy+=(GRAVITY+BUOY)*dt;
