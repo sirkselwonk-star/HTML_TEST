@@ -3402,34 +3402,47 @@ function goPage(p){renderPage(p);}
 var searchActive=false;
 function searchSlime(){
     var q=document.getElementById('search-input').value.trim().replace(/^#/,'');
+    if(!q)return;
     var num=parseInt(q);
-    if(isNaN(num)){return;}
-    var idx=-1;
-    for(var i=0;i<images.length;i++){
-        var m=images[i].title.match(/\d+/);
-        if(m&&parseInt(m[0])===num){idx=i;break;}
+    var matches=[];
+    if(!isNaN(num)){
+        /* numeric search — exact serial match */
+        for(var i=0;i<images.length;i++){
+            var m=images[i].title.match(/\d+/);
+            if(m&&parseInt(m[0])===num){matches.push(i);break;}
+        }
+    }else{
+        /* text search — case-insensitive substring match on title */
+        var ql=q.toLowerCase();
+        for(var i=0;i<images.length;i++){
+            if(images[i].title.toLowerCase().indexOf(ql)!==-1)matches.push(i);
+        }
     }
     var grid=document.getElementById('gallery-grid');
     grid.innerHTML='';
     searchActive=true;
     document.querySelectorAll('.pagination').forEach(function(el){el.style.display='none';});
-    if(idx===-1){
-        grid.innerHTML='<div class="search-no-result">No SLIME #'+num+' found</div>';
+    if(matches.length===0){
+        grid.innerHTML='<div class="search-no-result">No results for &ldquo;'+q+'&rdquo;</div>';
         return;
     }
-    var d=document.createElement('div');
-    d.className='card';
-    d.setAttribute('onclick','open3d('+idx+')');
-    var img=document.createElement('img');
-    img.src=images[idx].src;
-    img.alt=images[idx].title;
-    var lbl=document.createElement('div');
-    lbl.className='card-label';
-    lbl.textContent=images[idx].title;
-    d.appendChild(img);
-    d.appendChild(lbl);
-    grid.appendChild(d);
-    checkCardForSale(d);
+    for(var j=0;j<matches.length;j++){
+        var idx=matches[j];
+        var d=document.createElement('div');
+        d.className='card';
+        d.setAttribute('onclick','open3d('+idx+')');
+        var img=document.createElement('img');
+        img.src=images[idx].src;
+        img.loading='lazy';
+        img.alt=images[idx].title;
+        var lbl=document.createElement('div');
+        lbl.className='card-label';
+        lbl.textContent=images[idx].title;
+        d.appendChild(img);
+        d.appendChild(lbl);
+        grid.appendChild(d);
+        checkCardForSale(d);
+    }
 }
 function clearSearch(){
     searchActive=false;
@@ -3498,6 +3511,16 @@ if(!window.showSaveFilePicker){
     if(stRow){stRow.style.opacity='.35';stRow.style.pointerEvents='none';}
     var gp=document.getElementById('gif-picker');
     if(gp){gp.disabled=true;gp.checked=false;}
+}
+
+/* ── Cached gif.js worker blob URL ── */
+var _gifWorkerURL=null;
+function getGifWorkerURL(cb){
+    if(_gifWorkerURL){cb(_gifWorkerURL);return;}
+    fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
+        .then(function(r){return r.blob();})
+        .then(function(b){_gifWorkerURL=URL.createObjectURL(b);cb(_gifWorkerURL);})
+        .catch(function(e){cb(null,e);});
 }
 
 /* ── Video Export (WebM/VP9 → convert to GIF via gifski or ffmpeg) ── */
@@ -3634,16 +3657,17 @@ function startVideoExport(){
         document.getElementById('gif-phase').textContent='Fetching encoder\u2026';
         document.getElementById('gif-count').textContent='\u2026';
         document.getElementById('gif-bar').style.width='0%';
-        fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
-            .then(function(r){return r.blob();})
-            .then(function(b){convertToGif(videoBlob,URL.createObjectURL(b));})
-            .catch(function(e){
+        getGifWorkerURL(function(wURL,err){
+            if(err||!wURL){
                 restore();
-                alert('GIF encoder failed, saving as WebM instead: '+e.message);
+                alert('GIF encoder failed, saving as WebM instead: '+(err?err.message:'unknown'));
                 var url=URL.createObjectURL(videoBlob);
                 var a=document.createElement('a');
                 a.href=url; a.download=_slug+'.webm'; a.click();
-            });
+                return;
+            }
+            convertToGif(videoBlob,wURL);
+        });
     };
 
     /* ── Phase 2: video → GIF conversion (gif.js) ─────────────────────────
@@ -3693,7 +3717,6 @@ function startVideoExport(){
         });
         gif.on('finished',function(gifBlob){
             restore();
-            URL.revokeObjectURL(workerURL);
             URL.revokeObjectURL(videoURL);
             if(fileHandle){
                 fileHandle.createWritable().then(function(w){
@@ -4013,10 +4036,9 @@ function startConvertToGif(file){
     function dismiss(){document.body.removeChild(ov);}
 
     /* load gif.js worker then run conversion */
-    fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
-        .then(function(r){return r.blob();})
-        .then(function(workerBlob){
-            var workerURL=URL.createObjectURL(workerBlob);
+    getGifWorkerURL(function(workerURL,err){
+        if(err||!workerURL){dismiss();alert('Conversion failed: '+(err?err.message:'unknown'));return;}
+        (function(){
             var videoURL=URL.createObjectURL(file);
             var video=document.createElement('video');
             video.muted=true;
@@ -4058,7 +4080,6 @@ function startConvertToGif(file){
                 });
                 gif.on('finished',function(gifBlob){
                     dismiss();
-                    URL.revokeObjectURL(workerURL);
                     URL.revokeObjectURL(videoURL);
                     if(fileHandle){
                         fileHandle.createWritable().then(function(w){
@@ -4085,11 +4106,8 @@ function startConvertToGif(file){
             function startConv(){if(_convStarted)return;_convStarted=true;runConversion();}
             if(video.readyState>=1){startConv();}
             else{video.addEventListener('loadedmetadata',startConv);}
-        })
-        .catch(function(e){
-            dismiss();
-            alert('Conversion failed: '+e.message);
-        });
+        })();
+    });
     } // end doConvert
 
     if(usePicker){
@@ -4211,10 +4229,8 @@ function startFastGifExport(){
 
         /* fetch gif.js worker, render all frames, then encode */
         document.getElementById('gif-phase').textContent='Fetching encoder\u2026';
-        fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
-            .then(function(r){return r.blob();})
-            .then(function(wb){
-                var workerURL=URL.createObjectURL(wb);
+        getGifWorkerURL(function(workerURL,err){
+            if(err||!workerURL){restore();alert('GIF encoder failed: '+(err?err.message:'unknown'));return;}
                 var gif=new GIF({workers:4,quality:_GIF_QUALITY,globalPalette:false,dither:'FloydSteinberg',
                                  width:EXPORTW,height:EXPORTH,workerScript:workerURL,repeat:_GIF_LOOP});
                 gif.on('progress',function(p){
@@ -4223,7 +4239,6 @@ function startFastGifExport(){
                 });
                 gif.on('finished',function(gifBlob){
                     restore();
-                    URL.revokeObjectURL(workerURL);
                     if(fileHandle){
                         fileHandle.createWritable().then(function(w){
                             return w.write(gifBlob).then(function(){return w.close();});
@@ -4275,8 +4290,7 @@ function startFastGifExport(){
                     setTimeout(renderFrame,0); /* no pacing — as fast as GPU allows */
                 }
                 renderFrame();
-            })
-            .catch(function(e){restore(); alert('GIF encoder failed: '+e.message);});
+            });
     } // end doExport
 
     if(usePicker){
@@ -4507,10 +4521,9 @@ function exportBatchItem(idx,format,dirHandle,onDone){
         var _GIF_LOOP=parseInt(document.getElementById('gif-loop').value);
         document.getElementById('b-item-bar').style.width='50%';
         document.getElementById('b-status').textContent='Fetching encoder\u2026 \u00b7 '+(idx+1)+' / '+images.length;
-        fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
-            .then(function(r){return r.blob();})
-            .then(function(wb){
-                var workerURL=URL.createObjectURL(wb);
+        getGifWorkerURL(function(workerURL,fetchErr){
+            if(fetchErr||!workerURL){saveBlob(videoBlob);return;}
+            (function(){
                 var videoURL=URL.createObjectURL(videoBlob);
                 var video=document.createElement('video'); video.muted=true; video.src=videoURL;
                 var gifC=document.createElement('canvas'); gifC.width=EXPORTW; gifC.height=EXPORTH;
@@ -4521,7 +4534,6 @@ function exportBatchItem(idx,format,dirHandle,onDone){
                     document.getElementById('b-item-bar').style.width=(75+p*25)+'%';
                 });
                 gif.on('finished',function(gifBlob){
-                    URL.revokeObjectURL(workerURL);
                     URL.revokeObjectURL(videoURL);
                     saveBlob(gifBlob);
                 });
@@ -4546,8 +4558,8 @@ function exportBatchItem(idx,format,dirHandle,onDone){
                 function batchStartSeek(){if(_batchMetaStarted)return;_batchMetaStarted=true;seekNext();}
                 if(video.readyState>=1) batchStartSeek();
                 else video.addEventListener('loadedmetadata',batchStartSeek);
-            })
-            .catch(function(e){saveBlob(videoBlob);});
+            })();
+        });
     };
 
     /* render loop */
