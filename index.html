@@ -2407,22 +2407,42 @@ var updateSlimeWall=(function(){
             var tdCols=[
                 [255,0,136],[0,229,255],[255,238,0],[191,0,255]
             ];
+            /* Vortex cycle: 20s period, vortex active ~30% of the time */
+            var cycle=((now*0.001)%20)/20; /* 0-1 over 20s */
+            var vortex=0;
+            if(cycle>0.6&&cycle<0.9){
+                /* ramp vortex in and out smoothly */
+                var vc=(cycle-0.6)/0.3; /* 0-1 within vortex window */
+                vortex=Math.sin(vc*Math.PI); /* smooth bell curve 0->1->0 */
+            }
+            var spin=td*(1+vortex*4); /* spin faster during vortex */
+            var pull=vortex*0.22; /* pull blobs toward center */
+            var orbitScale=0.28*(1-pull);
             for(var ci=0;ci<4;ci++){
-                var angle=td+ci*Math.PI*0.5;
-                var bx=W*0.5+Math.cos(angle)*W*0.28;
-                var by=H*0.5+Math.sin(angle*0.7)*H*0.3;
-                var r2=120+Math.sin(td*1.3+ci*2)*40;
+                var angle=spin+ci*Math.PI*0.5;
+                var bx=W*0.5+Math.cos(angle)*W*orbitScale;
+                var by=H*0.5+Math.sin(angle*0.7)*H*(0.3*(1-pull));
+                var r2=120+Math.sin(td*1.3+ci*2)*40+vortex*60;
                 var cc=tdCols[ci];
                 var rg=ctx.createRadialGradient(bx,by,0,bx,by,r2);
                 rg.addColorStop(0,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',1)');
-                rg.addColorStop(0.4,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',0.5)');
+                rg.addColorStop(0.4,'rgba('+cc[0]+','+cc[1]+','+cc[2]+','+(0.5+vortex*0.3)+')');
                 rg.addColorStop(1,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',0)');
                 ctx.globalCompositeOperation='screen';
                 ctx.fillStyle=rg;
                 ctx.fillRect(0,0,W,H);
             }
+            /* During vortex, add a bright center bloom */
+            if(vortex>0.1){
+                var cg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,80*vortex);
+                cg.addColorStop(0,'rgba(255,255,255,'+vortex*0.4+')');
+                cg.addColorStop(0.5,'rgba(255,200,255,'+vortex*0.2+')');
+                cg.addColorStop(1,'rgba(0,0,0,0)');
+                ctx.fillStyle=cg;
+                ctx.fillRect(0,0,W,H);
+            }
             ctx.globalCompositeOperation='source-over';
-            ctx.globalAlpha=0.15;
+            ctx.globalAlpha=0.12;
             ctx.fillStyle='#100308'; ctx.fillRect(0,0,W,H);
             ctx.globalAlpha=1.0;
             tex.needsUpdate=true;
