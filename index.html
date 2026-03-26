@@ -2349,6 +2349,26 @@ var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),
     new THREE.MeshStandardMaterial({color:0x010f03,roughness:.15}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; scene.add(floor);
 
+/* ── Tie-dye volumetric blobs (pink theme) ── */
+var tieDyeBlobs=[];
+(function(){
+    var blobColors=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
+    var geo=new THREE.SphereGeometry(0.6,24,24);
+    for(var i=0;i<4;i++){
+        var mat=new THREE.MeshBasicMaterial({
+            color:blobColors[i],
+            transparent:true,opacity:0.35,
+            blending:THREE.AdditiveBlending,
+            depthWrite:false
+        });
+        var mesh=new THREE.Mesh(geo,mat);
+        mesh.visible=false;
+        mesh.renderOrder=-1;
+        scene.add(mesh);
+        tieDyeBlobs.push({mesh:mesh,phase:i*Math.PI*0.5,color:blobColors[i]});
+    }
+})();
+
 /* ── Scene FX globals ── */
 var slimeWallOn=true, slimeWallSpeedMult=1.0, slimeDripCount=14, slimeWallMesh=null;
 var mistOn=true, mistOpacity=0.08, mistSpeed=1.55, mistColorHex='#575757';
@@ -2399,43 +2419,6 @@ var updateSlimeWall=(function(){
     return function updateSlimeWall(now){
         if(!slimeWallOn){if(slimeWallMesh)slimeWallMesh.visible=false;return;}
         if(slimeWallMesh)slimeWallMesh.visible=true;
-
-        /* ── Tie-dye background mode (pink theme) ── */
-        if(currentTheme==='pink'){
-            var td=now*0.0003;
-            /* Heartbeat: double-pump then rest, ~1.2s cycle */
-            var hb=(now*0.001*0.85)%1; /* 0-1 over ~1.2s */
-            var beat=0;
-            if(hb<0.12) beat=Math.sin(hb/0.12*Math.PI);        /* first pump */
-            else if(hb>0.18&&hb<0.30) beat=Math.sin((hb-0.18)/0.12*Math.PI)*0.7; /* second pump */
-            var pulse=1+beat*0.4; /* size scale 1.0 - 1.4 */
-            var bright=0.5+beat*0.3; /* alpha 0.5 - 0.8 */
-
-            ctx.fillStyle='#100308'; ctx.fillRect(0,0,W,H);
-            var tdCols=[
-                [255,0,136],[0,229,255],[255,238,0],[191,0,255]
-            ];
-            for(var ci=0;ci<4;ci++){
-                var angle=td+ci*Math.PI*0.5;
-                var bx=W*0.5+Math.cos(angle)*W*0.28;
-                var by=H*0.5+Math.sin(angle*0.7)*H*0.3;
-                var r2=(120+Math.sin(td*1.3+ci*2)*40)*pulse;
-                var cc=tdCols[ci];
-                var rg=ctx.createRadialGradient(bx,by,0,bx,by,r2);
-                rg.addColorStop(0,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',1)');
-                rg.addColorStop(0.4,'rgba('+cc[0]+','+cc[1]+','+cc[2]+','+bright+')');
-                rg.addColorStop(1,'rgba('+cc[0]+','+cc[1]+','+cc[2]+',0)');
-                ctx.globalCompositeOperation='screen';
-                ctx.fillStyle=rg;
-                ctx.fillRect(0,0,W,H);
-            }
-            ctx.globalCompositeOperation='source-over';
-            ctx.globalAlpha=0.15;
-            ctx.fillStyle='#100308'; ctx.fillRect(0,0,W,H);
-            ctx.globalAlpha=1.0;
-            tex.needsUpdate=true;
-            return;
-        }
 
         if(!dotGlowOn||!dotGlows.length){return;}
         /* blit static BG then draw animated glow dots */
@@ -3123,26 +3106,47 @@ var tieDyeColors=[
 ];
 var tieDyeHudColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
 function tickTieDye3D(){
-    if(currentTheme!=='pink') return;
+    var isPink=currentTheme==='pink';
+    /* Show/hide volumetric blobs */
+    for(var bi=0;bi<tieDyeBlobs.length;bi++) tieDyeBlobs[bi].mesh.visible=isPink;
+    if(!isPink) return;
+
+    var now=performance.now()*0.001;
     var speed=0.4;
-    var now=performance.now()*0.001*speed;
-    var i=Math.floor(now)%4;
-    var f=now%1;
-    var c1=tieDyeColors[i];
-    var c2=tieDyeColors[(i+1)%4];
-    var mixed=new THREE.Color().lerpColors(c1,c2,f);
-    backRingMat.color.copy(mixed);
-    backRingMat.emissive.copy(mixed);
-    /* Heartbeat pulse on ring */
-    var hb=(performance.now()*0.001*0.85)%1;
+    var tn=now*speed;
+
+    /* Heartbeat rhythm */
+    var hb=(now*0.85)%1;
     var beat=0;
     if(hb<0.12) beat=Math.sin(hb/0.12*Math.PI);
     else if(hb>0.18&&hb<0.30) beat=Math.sin((hb-0.18)/0.12*Math.PI)*0.7;
+
+    /* Animate volumetric blobs */
+    for(var bi=0;bi<tieDyeBlobs.length;bi++){
+        var b=tieDyeBlobs[bi];
+        var a=now*0.3+b.phase;
+        var orbitR=2.5+Math.sin(now*0.2+bi)*0.5;
+        b.mesh.position.x=Math.cos(a)*orbitR;
+        b.mesh.position.y=Math.sin(a*0.6+bi)*1.2;
+        b.mesh.position.z=-1.8+Math.sin(a*0.4+bi*1.5)*0.5;
+        var s=0.5+Math.sin(now*0.5+bi*2)*0.2+beat*0.3;
+        b.mesh.scale.setScalar(s);
+        b.mesh.material.opacity=0.25+beat*0.15+Math.sin(now*0.7+bi)*0.08;
+    }
+
+    /* Ring color cycling */
+    var ci=Math.floor(tn)%4;
+    var f=tn%1;
+    var mixed=new THREE.Color().lerpColors(tieDyeColors[ci],tieDyeColors[(ci+1)%4],f);
+    backRingMat.color.copy(mixed);
+    backRingMat.emissive.copy(mixed);
     backRingMat.emissiveIntensity=1.2+beat*0.8;
     backRingMat.needsUpdate=true;
     ringLight.color.copy(mixed);
     ringLight.intensity=3.0+beat*2.0;
-    var hudIdx=Math.floor(now*1.3)%4;
+
+    /* HUD color cycling */
+    var hudIdx=Math.floor(tn*1.3)%4;
     var el=document.getElementById('sq-neon-hud');
     if(el&&sqNeonOn){
         el.style.borderColor=tieDyeHudColors[hudIdx];
