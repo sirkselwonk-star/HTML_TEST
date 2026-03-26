@@ -2399,7 +2399,7 @@ var slimePts=[
             tieDyeBlobs3D.push(a);
         }
         /* Create skin mesh — high-poly sphere that deforms to wrap anchors */
-        var skinGeo=new THREE.SphereGeometry(0.8*f.scale,24,18);
+        var skinGeo=new THREE.SphereGeometry(2.0*f.scale,32,24);
         var skinOrigPos=new Float32Array(skinGeo.attributes.position.array);
         var skinMat=new THREE.MeshPhongMaterial({
             color:blobColors[fi],emissive:blobColors[fi],
@@ -2439,7 +2439,7 @@ function deformSkin(skin,time){
             pullX/=totalW; pullY/=totalW; pullZ/=totalW;
         }
         /* Blend between original shape and pulled position */
-        var blend=0.7;
+        var blend=0.85;
         var fx=wx*(1-blend)+pullX*blend;
         var fy=wy*(1-blend)+pullY*blend;
         var fz=wz*(1-blend)+pullZ*blend;
