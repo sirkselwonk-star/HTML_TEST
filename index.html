@@ -2351,12 +2351,12 @@ floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; sc
 
 /* ── Tie-dye 3D goop blobs (pink theme, between wall and panel) ── */
 var tieDyeBlobs3D=[];
+var goopPhysicsLast=0;
 (function(){
     var blobColors=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
     for(var i=0;i<8;i++){
-        /* Each blob gets its own geometry so vertices can deform independently */
-        var geo=new THREE.SphereGeometry(0.5,20,16);
-        /* Store original vertex positions for wobble reference */
+        var baseR=0.35+Math.random()*0.35;
+        var geo=new THREE.SphereGeometry(baseR,20,16);
         var origPos=new Float32Array(geo.attributes.position.array);
         var mat=new THREE.MeshPhongMaterial({
             color:blobColors[i%4],
@@ -2371,7 +2371,14 @@ var tieDyeBlobs3D=[];
         var mesh=new THREE.Mesh(geo,mat);
         mesh.visible=false;
         scene.add(mesh);
-        tieDyeBlobs3D.push({mesh:mesh,phase:i*Math.PI*0.25,ci:i%4,origPos:origPos,seed:i*7.3});
+        /* Physics state */
+        var angle=i*Math.PI*0.25;
+        tieDyeBlobs3D.push({
+            mesh:mesh,phase:angle,ci:i%4,origPos:origPos,seed:i*7.3,
+            radius:baseR,
+            px:Math.cos(angle)*1.5, py:(Math.random()-0.5)*1.5, pz:-1.2+Math.random()*0.6-0.3,
+            vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3, vz:(Math.random()-0.5)*0.1
+        });
     }
 })();
 function wobbleGoopVerts(blob,time){
@@ -3137,21 +3144,58 @@ function tickTieDye3D(){
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++) tieDyeBlobs3D[bi].mesh.visible=isPink;
     if(!isPink) return;
 
-    /* Animate 3D goop blobs between wall (z=-2.1) and panel (z=0) */
+    /* Physics-driven 3D goop blobs between wall and panel */
     var now=performance.now()*0.001;
+    var dt=Math.min(now-goopPhysicsLast,0.05);
+    goopPhysicsLast=now;
+
+    /* Bounds: x=-3..3, y=-1.5..1.5, z=-1.8..-0.5 */
+    var BX=3.0,BY=1.5,BZmin=-1.8,BZmax=-0.5;
+    var GRAVITY=-0.15, BUOY=0.18, DRAG=0.985, REPEL=0.8;
+
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++){
         var b=tieDyeBlobs3D[bi];
-        var a=now*0.25+b.phase;
-        b.mesh.position.x=Math.cos(a)*(1.8+Math.sin(now*0.15+bi)*0.6);
-        b.mesh.position.y=Math.sin(a*0.5+bi)*0.8+Math.sin(now*0.3+bi*3)*0.3;
-        b.mesh.position.z=-1.2+Math.sin(a*0.35+bi*1.5)*0.5;
-        var sx=0.5+Math.sin(now*0.4+bi*1.7)*0.15;
-        var sy=0.5+Math.sin(now*0.35+bi*2.3)*0.2;
-        var sz=0.5+Math.sin(now*0.45+bi*0.9)*0.15;
-        b.mesh.scale.set(sx,sy,sz);
-        b.mesh.rotation.x=now*0.1+bi;
-        b.mesh.rotation.y=now*0.15+bi*2;
-        b.mesh.material.opacity=0.35+Math.sin(now*0.5+bi)*0.1;
+
+        /* Gentle gravity + buoyancy (floaty, slightly upward bias) */
+        b.vy+=(GRAVITY+BUOY)*dt;
+
+        /* Slow wandering force */
+        b.vx+=Math.sin(now*0.3+b.seed)*0.02*dt;
+        b.vy+=Math.cos(now*0.25+b.seed*1.3)*0.02*dt;
+        b.vz+=Math.sin(now*0.2+b.seed*0.7)*0.01*dt;
+
+        /* Blob-to-blob repulsion */
+        for(var bj=bi+1;bj<tieDyeBlobs3D.length;bj++){
+            var o=tieDyeBlobs3D[bj];
+            var dx=b.px-o.px,dy=b.py-o.py,dz=b.pz-o.pz;
+            var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+            var minD=b.radius+o.radius+0.1;
+            if(dist<minD&&dist>0.01){
+                var push=REPEL*(minD-dist)/dist*dt;
+                b.vx+=dx*push; b.vy+=dy*push; b.vz+=dz*push;
+                o.vx-=dx*push; o.vy-=dy*push; o.vz-=dz*push;
+            }
+        }
+
+        /* Drag */
+        b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG;
+
+        /* Integrate */
+        b.px+=b.vx*dt; b.py+=b.vy*dt; b.pz+=b.vz*dt;
+
+        /* Soft boundary bounces */
+        if(b.px<-BX){b.px=-BX;b.vx=Math.abs(b.vx)*0.5;}
+        if(b.px>BX){b.px=BX;b.vx=-Math.abs(b.vx)*0.5;}
+        if(b.py<-BY){b.py=-BY;b.vy=Math.abs(b.vy)*0.5;}
+        if(b.py>BY){b.py=BY;b.vy=-Math.abs(b.vy)*0.5;}
+        if(b.pz<BZmin){b.pz=BZmin;b.vz=Math.abs(b.vz)*0.3;}
+        if(b.pz>BZmax){b.pz=BZmax;b.vz=-Math.abs(b.vz)*0.3;}
+
+        /* Apply to mesh */
+        b.mesh.position.set(b.px,b.py,b.pz);
+        b.mesh.rotation.x+=b.vy*0.3;
+        b.mesh.rotation.y+=b.vx*0.3;
+        b.mesh.material.opacity=0.38+Math.sin(now*0.4+bi)*0.07;
         wobbleGoopVerts(b,now);
     }
     var now=performance.now()*0.001;
