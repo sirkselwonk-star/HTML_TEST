@@ -3125,8 +3125,10 @@ function tickTieDye3D(){
     var mixed=new THREE.Color().lerpColors(c1,c2,f);
     backRingMat.color.copy(mixed);
     backRingMat.emissive.copy(mixed);
+    backRingMat.emissiveIntensity=1.2;
     backRingMat.needsUpdate=true;
     ringLight.color.copy(mixed);
+    ringLight.intensity=3.0;
     var hudIdx=Math.floor(now*1.3)%4;
     var el=document.getElementById('sq-neon-hud');
     if(el&&sqNeonOn){
