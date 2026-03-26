@@ -2349,50 +2349,36 @@ var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),
     new THREE.MeshStandardMaterial({color:0x010f03,roughness:.15}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; scene.add(floor);
 
-/* ── Tie-dye 3D goop blobs (pink theme, drip from top) ── */
+/* ── Tie-dye 3D goop blobs (pink theme, between wall and panel) ── */
 var tieDyeBlobs3D=[];
 var goopPhysicsLast=0;
-var GOOP3D_COLORS=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
-function spawnGoopBlob(index){
-    var baseR=0.12+Math.random()*0.2;
-    var geo=new THREE.SphereGeometry(baseR,16,12);
-    var origPos=new Float32Array(geo.attributes.position.array);
-    var ci=index%4;
-    var mat=new THREE.MeshPhongMaterial({
-        color:GOOP3D_COLORS[ci],emissive:GOOP3D_COLORS[ci],
-        emissiveIntensity:0.6,transparent:true,opacity:0.5,
-        blending:THREE.AdditiveBlending,depthWrite:false,
-        shininess:90,specular:0xffffff
-    });
-    var mesh=new THREE.Mesh(geo,mat);
-    mesh.visible=false;
-    scene.add(mesh);
-    var b={
-        mesh:mesh,ci:ci,origPos:origPos,seed:index*7.3+Math.random()*10,
-        radius:baseR,_merge:0,stuck:false,stuckTimer:0,
-        px:0,py:0,pz:0,vx:0,vy:0,vz:0
-    };
-    resetGoopBlob(b);
-    return b;
-}
-function resetGoopBlob(b){
-    b.px=(Math.random()-0.5)*3.5;
-    b.py=1.8+Math.random()*0.5;
-    b.pz=-0.8+(Math.random()-0.5)*0.6;
-    b.vx=(Math.random()-0.5)*0.05;
-    b.vy=-0.01-Math.random()*0.02;
-    b.vz=(Math.random()-0.5)*0.02;
-    b.stuck=false;
-    b.stuckTimer=0;
-    b._merge=0;
-}
 (function(){
-    for(var i=0;i<12;i++){
-        tieDyeBlobs3D.push(spawnGoopBlob(i));
-    }
-    /* Stagger spawn times so they don't all appear at once */
-    for(var i=0;i<tieDyeBlobs3D.length;i++){
-        tieDyeBlobs3D[i].py=1.8-Math.random()*3.5;
+    var blobColors=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
+    for(var i=0;i<8;i++){
+        var baseR=0.35+Math.random()*0.35;
+        var geo=new THREE.SphereGeometry(baseR,20,16);
+        var origPos=new Float32Array(geo.attributes.position.array);
+        var mat=new THREE.MeshPhongMaterial({
+            color:blobColors[i%4],
+            emissive:blobColors[i%4],
+            emissiveIntensity:0.6,
+            transparent:true,opacity:0.45,
+            blending:THREE.AdditiveBlending,
+            depthWrite:false,
+            shininess:90,
+            specular:0xffffff
+        });
+        var mesh=new THREE.Mesh(geo,mat);
+        mesh.visible=false;
+        scene.add(mesh);
+        /* Physics state */
+        var angle=i*Math.PI*0.25;
+        tieDyeBlobs3D.push({
+            mesh:mesh,phase:angle,ci:i%4,origPos:origPos,seed:i*7.3,
+            radius:baseR,
+            px:Math.cos(angle)*1.5, py:(Math.random()-0.5)*1.5, pz:-1.2+Math.random()*0.6-0.3,
+            vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3, vz:(Math.random()-0.5)*0.1
+        });
     }
 })();
 function wobbleGoopVerts(blob,time){
@@ -3158,128 +3144,124 @@ function tickTieDye3D(){
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++) tieDyeBlobs3D[bi].mesh.visible=isPink;
     if(!isPink) return;
 
-    /* Dripping goop physics */
+    /* Physics-driven 3D goop blobs between wall and panel */
     var now=performance.now()*0.001;
     var dt=Math.min(now-goopPhysicsLast,0.05);
     goopPhysicsLast=now;
 
-    var BX=3.0,BZmin=-1.8,BZmax=-0.3;
-    var GRAVITY=-0.35, DRAG=0.98, REPEL=0.6;
-    var STICKY_DRAG=0.92, SLIDE_GRAVITY=-0.04;
+    /* Bounds: x=-3..3, y=-1.5..1.5, z=-1.8..-0.5 */
+    var BX=3.0,BY=1.5,BZmin=-1.8,BZmax=-0.5;
+    var GRAVITY=-0.15, BUOY=0.18, DRAG=0.985, REPEL=0.8;
 
-    /* Panel collision box in pivot local space */
+    /* Panel collision box — transform blob position into pivot local space */
     var pivotY=panelYOffset+Math.sin(t*.7)*.03;
     var cosY=Math.cos(-rotY),sinY=Math.sin(-rotY);
     var cosX=Math.cos(-rotX),sinX=Math.sin(-rotX);
-    var PW=1.15,PH=1.15,PD=0.12;
+    var PW=1.15,PH=1.15,PD=0.15; /* half-extents of panel collision box */
 
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++){
         var b=tieDyeBlobs3D[bi];
 
-        /* Transform to pivot local coords for panel collision */
+        /* Panel collision: transform blob into pivot local coords */
         var lx=b.px, ly=b.py-pivotY, lz=b.pz;
+        /* Rotate by -pivotY rotation */
         var rx=lx*cosY-lz*sinY;
         var rz=lx*sinY+lz*cosY;
+        /* Rotate by -pivotX rotation */
         var ry=ly*cosX-rz*sinX;
         var rz2=ly*sinX+rz*cosX;
 
-        var br=b.radius*0.7;
+        /* Check if blob center is inside the expanded panel box */
+        var br=b.radius*0.8;
         var penX=PW+br-Math.abs(rx);
         var penY=PH+br-Math.abs(ry);
         var penZ=PD+br-Math.abs(rz2);
-
         if(penX>0&&penY>0&&penZ>0){
-            /* Hit the panel — stick to the front/back surface */
-            if(!b.stuck){
-                b.stuck=true;
-                b.stuckTimer=0;
+            /* Push out along axis with smallest penetration */
+            var pushStr=2.5;
+            if(penZ<=penX&&penZ<=penY){
+                var signZ=rz2>0?1:-1;
+                b.pz+=signZ*penZ*0.3;
+                b.vz+=signZ*pushStr*dt;
+            }else if(penX<=penY){
+                var signX=rx>0?1:-1;
+                b.px+=signX*penX*0.3;
+                b.vx+=signX*pushStr*dt;
+            }else{
+                var signY=ry>0?1:-1;
+                b.py+=signY*penY*0.3;
+                b.vy+=signY*pushStr*dt;
             }
-            /* Push to nearest face (front or back) */
-            var signZ=rz2>0?1:-1;
-            b.pz+=signZ*penZ*0.5;
-            b.vz=0;
-
-            /* Sticky ooze: heavy drag, slow slide downward */
-            b.vx*=STICKY_DRAG;
-            b.vy*=STICKY_DRAG;
-            b.vy+=SLIDE_GRAVITY*dt;
-
-            /* Slight random ooze sideways */
-            b.vx+=Math.sin(now*0.5+b.seed)*0.003*dt;
-
-            b.stuckTimer+=dt;
-
-            /* After oozing long enough, drip off */
-            if(b.stuckTimer>6+Math.random()*4){
-                b.stuck=false;
-                b.vy=-0.1;
-            }
-            /* If slid off the edge of the panel, unstick */
-            if(Math.abs(rx)>PW||Math.abs(ry)>PH){
-                b.stuck=false;
-            }
-        }else{
-            b.stuck=false;
-            /* Free fall — gravity pulls down */
-            b.vy+=GRAVITY*dt;
-            /* Slight drift */
-            b.vx+=Math.sin(now*0.3+b.seed)*0.01*dt;
-            b.vz+=Math.sin(now*0.2+b.seed*0.7)*0.005*dt;
         }
+
+        /* Gentle gravity + buoyancy (floaty, slightly upward bias) */
+        b.vy+=(GRAVITY+BUOY)*dt;
+
+        /* Slow wandering force */
+        b.vx+=Math.sin(now*0.3+b.seed)*0.02*dt;
+        b.vy+=Math.cos(now*0.25+b.seed*1.3)*0.02*dt;
+        b.vz+=Math.sin(now*0.2+b.seed*0.7)*0.01*dt;
 
         /* Blob-to-blob: same color attracts, different repels */
         for(var bj=bi+1;bj<tieDyeBlobs3D.length;bj++){
             var o=tieDyeBlobs3D[bj];
             var dx=b.px-o.px,dy=b.py-o.py,dz=b.pz-o.pz;
             var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
-            var minD=b.radius+o.radius+0.05;
+            var sameColor=b.ci===o.ci;
+            var minD=b.radius+o.radius+0.1;
 
-            if(b.ci===o.ci){
-                var attractR=minD*2.5;
+            if(sameColor){
+                /* Attract within range, merge on contact */
+                var attractR=minD*3.5;
                 if(dist<attractR&&dist>0.01){
-                    var pull=0.3*(1-dist/attractR)/dist*dt;
+                    var pull=0.4*(1-dist/attractR)/dist*dt;
                     b.vx-=dx*pull; b.vy-=dy*pull; b.vz-=dz*pull;
                     o.vx+=dx*pull; o.vy+=dy*pull; o.vz+=dz*pull;
                 }
+                /* When overlapping, scale up both to simulate merge */
                 if(dist<minD){
                     var overlap=1-dist/minD;
-                    b._merge=Math.min(b._merge+overlap*0.1,0.5);
-                    o._merge=Math.min(o._merge+overlap*0.1,0.5);
-                    var nudge=0.1*(minD-dist)/dist*dt;
-                    b.vx+=dx*nudge; b.vy+=dy*nudge;
-                    o.vx-=dx*nudge; o.vy-=dy*nudge;
+                    b._merge=Math.min((b._merge||0)+overlap*0.1,0.6);
+                    o._merge=Math.min((o._merge||0)+overlap*0.1,0.6);
+                    /* Soft repel to prevent total collapse */
+                    var nudge=0.15*(minD-dist)/dist*dt;
+                    b.vx+=dx*nudge; b.vy+=dy*nudge; b.vz+=dz*nudge;
+                    o.vx-=dx*nudge; o.vy-=dy*nudge; o.vz-=dz*nudge;
                 }
-            }else if(dist<minD&&dist>0.01){
-                var push=REPEL*(minD-dist)/dist*dt;
-                b.vx+=dx*push; b.vy+=dy*push; b.vz+=dz*push;
-                o.vx-=dx*push; o.vy-=dy*push; o.vz-=dz*push;
+            }else{
+                /* Different colors repel */
+                if(dist<minD&&dist>0.01){
+                    var push=REPEL*(minD-dist)/dist*dt;
+                    b.vx+=dx*push; b.vy+=dy*push; b.vz+=dz*push;
+                    o.vx-=dx*push; o.vy-=dy*push; o.vz-=dz*push;
+                }
             }
         }
 
-        b._merge=b._merge*0.97;
+        /* Decay merge scale back toward 0 when apart (stretchy pull-apart) */
+        b._merge=(b._merge||0)*0.96;
 
-        /* Drag (less when stuck — already handled above) */
-        if(!b.stuck){ b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG; }
+        /* Drag */
+        b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG;
 
         /* Integrate */
         b.px+=b.vx*dt; b.py+=b.vy*dt; b.pz+=b.vz*dt;
 
-        /* Boundaries */
-        if(b.px<-BX) b.px=-BX;
-        if(b.px>BX) b.px=BX;
-        if(b.pz<BZmin) b.pz=BZmin;
-        if(b.pz>BZmax) b.pz=BZmax;
+        /* Soft boundary bounces */
+        if(b.px<-BX){b.px=-BX;b.vx=Math.abs(b.vx)*0.5;}
+        if(b.px>BX){b.px=BX;b.vx=-Math.abs(b.vx)*0.5;}
+        if(b.py<-BY){b.py=-BY;b.vy=Math.abs(b.vy)*0.5;}
+        if(b.py>BY){b.py=BY;b.vy=-Math.abs(b.vy)*0.5;}
+        if(b.pz<BZmin){b.pz=BZmin;b.vz=Math.abs(b.vz)*0.3;}
+        if(b.pz>BZmax){b.pz=BZmax;b.vz=-Math.abs(b.vz)*0.3;}
 
-        /* Respawn if fallen below view */
-        if(b.py<-2.5) resetGoopBlob(b);
-
-        /* Apply to mesh */
-        var ms=1+b._merge;
+        /* Apply to mesh — scale up when merging */
+        var ms=1+(b._merge||0);
         b.mesh.position.set(b.px,b.py,b.pz);
         b.mesh.scale.setScalar(ms);
-        b.mesh.rotation.x+=b.vy*0.2;
-        b.mesh.rotation.y+=b.vx*0.2;
-        b.mesh.material.opacity=b.stuck?0.55:0.4;
+        b.mesh.rotation.x+=b.vy*0.3;
+        b.mesh.rotation.y+=b.vx*0.3;
+        b.mesh.material.opacity=0.38+Math.sin(now*0.4+bi)*0.07+(b._merge||0)*0.15;
         wobbleGoopVerts(b,now);
     }
     var now=performance.now()*0.001;
