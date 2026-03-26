@@ -2349,25 +2349,7 @@ var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),
     new THREE.MeshStandardMaterial({color:0x010f03,roughness:.15}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; scene.add(floor);
 
-/* ── Tie-dye volumetric blobs (pink theme) ── */
-var tieDyeBlobs=[];
-(function(){
-    var blobColors=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
-    var geo=new THREE.IcosahedronGeometry(0.7,1);
-    for(var i=0;i<4;i++){
-        var mat=new THREE.MeshBasicMaterial({
-            color:blobColors[i],
-            transparent:true,opacity:0.35,
-            blending:THREE.AdditiveBlending,
-            depthWrite:false
-        });
-        var mesh=new THREE.Mesh(geo,mat);
-        mesh.visible=false;
-        mesh.renderOrder=-1;
-        scene.add(mesh);
-        tieDyeBlobs.push({mesh:mesh,phase:i*Math.PI*0.5,color:blobColors[i]});
-    }
-})();
+
 
 /* ── Scene FX globals ── */
 var slimeWallOn=true, slimeWallSpeedMult=1.0, slimeDripCount=14, slimeWallMesh=null;
@@ -3106,31 +3088,10 @@ var tieDyeColors=[
 ];
 var tieDyeHudColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
 function tickTieDye3D(){
-    var isPink=currentTheme==='pink';
-    for(var bi=0;bi<tieDyeBlobs.length;bi++) tieDyeBlobs[bi].mesh.visible=isPink;
-    if(!isPink) return;
-
+    if(currentTheme!=='pink') return;
     var now=performance.now()*0.001;
     var speed=0.4;
     var tn=now*speed;
-
-    /* Animate goop blobs — slow drifting, organic squash/stretch */
-    for(var bi=0;bi<tieDyeBlobs.length;bi++){
-        var b=tieDyeBlobs[bi];
-        var a=now*0.25+b.phase;
-        var orbitR=2.2+Math.sin(now*0.15+bi)*0.8;
-        b.mesh.position.x=Math.cos(a)*orbitR;
-        b.mesh.position.y=Math.sin(a*0.5+bi)*1.0+Math.sin(now*0.3+bi*3)*0.3;
-        b.mesh.position.z=-1.6+Math.sin(a*0.35+bi*1.5)*0.6;
-        /* Organic squash and stretch */
-        var sx=0.6+Math.sin(now*0.4+bi*1.7)*0.15;
-        var sy=0.6+Math.sin(now*0.35+bi*2.3)*0.2;
-        var sz=0.6+Math.sin(now*0.45+bi*0.9)*0.15;
-        b.mesh.scale.set(sx,sy,sz);
-        b.mesh.rotation.x=now*0.1+bi;
-        b.mesh.rotation.y=now*0.15+bi*2;
-        b.mesh.material.opacity=0.28+Math.sin(now*0.5+bi)*0.1;
-    }
 
     /* Ring color cycling */
     var ci=Math.floor(tn)%4;
@@ -3339,12 +3300,38 @@ function rebuildGoops(){
   goops=[];
   for(var i=0;i<GOOP_CFG.count;i++) goops.push(new GoopBlob(i,GOOP_CFG.count,W,H));
   if(GOOP_CFG.topBand) rebuildBandGoops();
+  rebuildTieDyeGoops();
+}
+/* ── Tie-dye goop blobs (pink theme overlay) ── */
+var tieDyeGoops=[];
+var tieDyeGoopColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
+function rebuildTieDyeGoops(){
+  tieDyeGoops=[];
+  if(!goopCanvas) return;
+  var W=goopCanvas.width,H=goopCanvas.height;
+  for(var i=0;i<8;i++){
+    var g=new GoopBlob(i,8,W,H);
+    g._tdColor=tieDyeGoopColors[i%4];
+    g.r*=1.3;
+    g.alpha=0.55+Math.random()*0.2;
+    tieDyeGoops.push(g);
+  }
 }
 function animateOoze(){
   if(!goopCanvas||!goopCtx){goopAnimId=null;return;}
   goopCtx.clearRect(0,0,goopCanvas.width,goopCanvas.height);
   if(GOOP_CFG.on) goops.forEach(function(g){g.update();g.draw(goopCtx);});
   if(GOOP_CFG.topBand) bandGoops.forEach(function(g){g.update();g.draw(goopCtx);});
+  /* Tie-dye goop blobs on pink theme */
+  if(currentTheme==='pink'){
+    var savedColor=GOOP_CFG.color;
+    tieDyeGoops.forEach(function(g){
+      g.update();
+      GOOP_CFG.color=g._tdColor;
+      g.draw(goopCtx);
+    });
+    GOOP_CFG.color=savedColor;
+  }
   goopAnimId=requestAnimationFrame(animateOoze);
 }
 function startGoopAnim(){
