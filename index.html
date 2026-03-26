@@ -118,6 +118,7 @@ header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28e
 #c3d:active{cursor:grabbing}
 #flare-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:10000;display:block}
 #slime-goop{position:absolute;inset:0;pointer-events:none;z-index:3;}
+#tiedye-goop{position:absolute;inset:0;pointer-events:none;z-index:1;}
 #lb-title-wrap{position:fixed;top:83%;left:50%;transform:translateX(-50%);
   text-align:center;pointer-events:none;z-index:10001}
 #lb-title{font-size:clamp(1rem,2.6vw,1.4rem);letter-spacing:.2em;text-transform:uppercase;
@@ -328,6 +329,7 @@ select.ctrl-select:focus{border-color:var(--green)}
 <div id="lb3d">
   <div id="sq-neon-hud"></div>
   <canvas id="c3d"></canvas>
+  <canvas id="tiedye-goop"></canvas>
   <canvas id="slime-goop"></canvas>
   <canvas id="flare-c"></canvas>
   <button id="lb-close" onclick="close3d()">&times;</button>
@@ -3302,13 +3304,13 @@ function rebuildGoops(){
   if(GOOP_CFG.topBand) rebuildBandGoops();
   rebuildTieDyeGoops();
 }
-/* ── Tie-dye goop blobs (pink theme overlay) ── */
+/* ── Tie-dye goop blobs (pink theme, separate canvas behind 3D) ── */
 var tieDyeGoops=[];
+var tieDyeGoopCanvas=null,tieDyeGoopCtx=null;
 var tieDyeGoopColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
 function rebuildTieDyeGoops(){
   tieDyeGoops=[];
-  if(!goopCanvas) return;
-  var W=goopCanvas.width,H=goopCanvas.height;
+  var W=window.innerWidth,H=window.innerHeight;
   for(var i=0;i<8;i++){
     var g=new GoopBlob(i,8,W,H);
     g._tdColor=tieDyeGoopColors[i%4];
@@ -3322,15 +3324,21 @@ function animateOoze(){
   goopCtx.clearRect(0,0,goopCanvas.width,goopCanvas.height);
   if(GOOP_CFG.on) goops.forEach(function(g){g.update();g.draw(goopCtx);});
   if(GOOP_CFG.topBand) bandGoops.forEach(function(g){g.update();g.draw(goopCtx);});
-  /* Tie-dye goop blobs on pink theme */
-  if(currentTheme==='pink'){
-    var savedColor=GOOP_CFG.color;
-    tieDyeGoops.forEach(function(g){
-      g.update();
-      GOOP_CFG.color=g._tdColor;
-      g.draw(goopCtx);
-    });
-    GOOP_CFG.color=savedColor;
+  /* Tie-dye goop blobs on pink theme — rendered on separate behind-canvas */
+  if(tieDyeGoopCanvas){
+    if(currentTheme==='pink'){
+      tieDyeGoopCanvas.style.display='block';
+      tieDyeGoopCtx.clearRect(0,0,tieDyeGoopCanvas.width,tieDyeGoopCanvas.height);
+      var savedColor=GOOP_CFG.color;
+      tieDyeGoops.forEach(function(g){
+        g.update();
+        GOOP_CFG.color=g._tdColor;
+        g.draw(tieDyeGoopCtx);
+      });
+      GOOP_CFG.color=savedColor;
+    }else{
+      tieDyeGoopCanvas.style.display='none';
+    }
   }
   goopAnimId=requestAnimationFrame(animateOoze);
 }
@@ -3341,6 +3349,10 @@ function startGoopAnim(){
   goopCanvas.width=window.innerWidth;goopCanvas.height=window.innerHeight;
   goopCanvas.style.mixBlendMode=GOOP_CFG.blend;
   goopCanvas.style.zIndex=GOOP_CFG.zLayer;
+  tieDyeGoopCanvas=document.getElementById('tiedye-goop');
+  tieDyeGoopCtx=tieDyeGoopCanvas.getContext('2d');
+  tieDyeGoopCanvas.width=window.innerWidth;tieDyeGoopCanvas.height=window.innerHeight;
+  tieDyeGoopCanvas.style.mixBlendMode='screen';
   rebuildGoops();
   if(GOOP_CFG.topBand) rebuildBandGoops();
   animateOoze();
