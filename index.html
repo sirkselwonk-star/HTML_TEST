@@ -3189,60 +3189,33 @@ function tickTieDye3D(){
         var penZ=PD+br-Math.abs(rz2);
 
         if(penX>0&&penY>0&&penZ>0){
-            /* Inside panel — resolve collision by pushing out the shallowest axis */
-            /* Convert push direction back to world space */
-            var cosYi=Math.cos(rotY),sinYi=Math.sin(rotY);
-            var cosXi=Math.cos(rotX),sinXi=Math.sin(rotX);
+            /* Hit the panel — stick to the front/back surface */
+            if(!b.stuck){
+                b.stuck=true;
+                b.stuckTimer=0;
+            }
+            /* Push to nearest face (front or back) */
+            var signZ=rz2>0?1:-1;
+            b.pz+=signZ*penZ*0.5;
+            b.vz=0;
 
-            if(penZ<=penX&&penZ<=penY){
-                /* Nearest exit is front/back face — STICK here */
-                var signZ=rz2>0?1:-1;
-                /* Push local z to surface */
-                var targetRz2=signZ*(PD+br);
-                /* Convert back to world: undo rotX then rotY */
-                var wry=ry*cosXi+targetRz2*sinXi;
-                var wrz=-ry*sinXi+targetRz2*cosXi;
-                var wpx=rx*cosYi+wrz*sinYi;
-                var wpz=-rx*sinYi+wrz*cosYi;
-                b.px=wpx; b.py=wry+pivotY; b.pz=wpz;
-                b.vz=0;
+            /* Sticky ooze: heavy drag, slow slide downward */
+            b.vx*=STICKY_DRAG;
+            b.vy*=STICKY_DRAG;
+            b.vy+=SLIDE_GRAVITY*dt;
 
-                if(!b.stuck){ b.stuck=true; b.stuckTimer=0; }
+            /* Slight random ooze sideways */
+            b.vx+=Math.sin(now*0.5+b.seed)*0.003*dt;
 
-                /* Sticky ooze: heavy drag, slow slide downward */
-                b.vx*=STICKY_DRAG;
-                b.vy*=STICKY_DRAG;
-                b.vy+=SLIDE_GRAVITY*dt;
-                b.vx+=Math.sin(now*0.5+b.seed)*0.003*dt;
-                b.stuckTimer+=dt;
+            b.stuckTimer+=dt;
 
-                if(b.stuckTimer>6+Math.random()*4){
-                    b.stuck=false; b.vy=-0.1;
-                }
-                if(Math.abs(rx)>PW||Math.abs(ry)>PH){
-                    b.stuck=false;
-                }
-            }else if(penY<=penX){
-                /* Nearest exit is top/bottom edge — slide off, don't stick */
-                var signY=ry>0?1:-1;
-                var targetRy=signY*(PH+br);
-                var wrz3=-targetRy*sinXi+rz2*cosXi;
-                var wry3=targetRy*cosXi+rz2*sinXi;
-                var wpx3=rx*cosYi+wrz3*sinYi;
-                var wpz3=-rx*sinYi+wrz3*cosYi;
-                b.px=wpx3; b.py=wry3+pivotY; b.pz=wpz3;
-                b.vy*=0.3;
+            /* After oozing long enough, drip off */
+            if(b.stuckTimer>6+Math.random()*4){
                 b.stuck=false;
-            }else{
-                /* Nearest exit is left/right edge — slide off */
-                var signX=rx>0?1:-1;
-                var targetRx=signX*(PW+br);
-                var wrz4=-ry*sinXi+rz2*cosXi;
-                var wry4=ry*cosXi+rz2*sinXi;
-                var wpx4=targetRx*cosYi+wrz4*sinYi;
-                var wpz4=-targetRx*sinYi+wrz4*cosYi;
-                b.px=wpx4; b.py=wry4+pivotY; b.pz=wpz4;
-                b.vx*=0.3;
+                b.vy=-0.1;
+            }
+            /* If slid off the edge of the panel, unstick */
+            if(Math.abs(rx)>PW||Math.abs(ry)>PH){
                 b.stuck=false;
             }
         }else{
