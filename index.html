@@ -71,6 +71,23 @@ header h1 svg{height:clamp(4rem,13vw,7.9rem);width:auto}
     drop-shadow(0 0 60px #ff0088) drop-shadow(0 0 100px #bf00ff)}
 }
 header h1.tie-dye{animation:tie-dye-swirl 6s linear infinite}
+@keyframes tie-dye-card{
+  0%{box-shadow:3px -2px 14px #ff0088,-3px 2px 14px #00e5ff,0 -3px 14px #ffee00,0 3px 14px #bf00ff}
+  25%{box-shadow:2px 3px 14px #00e5ff,-2px -3px 14px #ffee00,3px 0 14px #bf00ff,-3px 0 14px #ff0088}
+  50%{box-shadow:-3px 2px 14px #ffee00,3px -2px 14px #bf00ff,0 3px 14px #ff0088,0 -3px 14px #00e5ff}
+  75%{box-shadow:-2px -3px 14px #bf00ff,2px 3px 14px #ff0088,-3px 0 14px #00e5ff,3px 0 14px #ffee00}
+  100%{box-shadow:3px -2px 14px #ff0088,-3px 2px 14px #00e5ff,0 -3px 14px #ffee00,0 3px 14px #bf00ff}
+}
+@keyframes tie-dye-btn{
+  0%{filter:drop-shadow(2px -2px 6px #ff0088) drop-shadow(-2px 2px 6px #00e5ff) drop-shadow(0 -2px 8px #ffee00) drop-shadow(0 2px 8px #bf00ff)}
+  25%{filter:drop-shadow(-2px -2px 6px #00e5ff) drop-shadow(2px 2px 6px #ffee00) drop-shadow(2px 0 8px #bf00ff) drop-shadow(-2px 0 8px #ff0088)}
+  50%{filter:drop-shadow(-2px 2px 6px #ffee00) drop-shadow(2px -2px 6px #bf00ff) drop-shadow(0 2px 8px #ff0088) drop-shadow(0 -2px 8px #00e5ff)}
+  75%{filter:drop-shadow(2px 2px 6px #bf00ff) drop-shadow(-2px -2px 6px #ff0088) drop-shadow(-2px 0 8px #00e5ff) drop-shadow(2px 0 8px #ffee00)}
+  100%{filter:drop-shadow(2px -2px 6px #ff0088) drop-shadow(-2px 2px 6px #00e5ff) drop-shadow(0 -2px 8px #ffee00) drop-shadow(0 2px 8px #bf00ff)}
+}
+.tie-dye-cards .card{animation:tie-dye-card 6s linear infinite;border-color:rgba(255,0,136,.3)}
+.tie-dye-cards .card:hover{animation:tie-dye-card 3s linear infinite}
+.theme-btn.tie-dye-btn{animation:tie-dye-btn 6s linear infinite !important}
 header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28em;text-transform:uppercase}
 .badge{display:inline-block;margin-top:18px;padding:5px 18px;border:1px solid var(--green);
   border-radius:40px;font-size:.72rem;letter-spacing:.2em;color:var(--green);text-transform:uppercase}
@@ -1104,8 +1121,13 @@ function applyColorTheme(name){
   });
 
   /* tie-dye swirl on pink theme */
+  var isPink=name==='pink';
   var h1=document.querySelector('header h1');
-  if(h1) h1.classList.toggle('tie-dye',name==='pink');
+  if(h1) h1.classList.toggle('tie-dye',isPink);
+  var grid=document.querySelector('.grid');
+  if(grid) grid.classList.toggle('tie-dye-cards',isPink);
+  var pinkBtn=document.querySelector('.theme-btn[data-theme="pink"]');
+  if(pinkBtn) pinkBtn.classList.toggle('tie-dye-btn',isPink);
 
   /* ── 3D Scene updates (only if scene is initialized) ── */
   if(typeof ambient!=='undefined'){
