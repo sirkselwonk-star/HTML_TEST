@@ -2375,6 +2375,13 @@ var slimePts=[
             var sp=slimePts[pi];
             var r=sp.r*f.scale;
             var geo=new THREE.SphereGeometry(r,14,10);
+            /* For tentacles, shift geometry down so top is at origin (pivot from top) */
+            if(pi>0){
+                var pos=geo.attributes.position;
+                for(var vi=0;vi<pos.count;vi++) pos.array[vi*3+1]-=r;
+                pos.needsUpdate=true;
+                geo.computeBoundingSphere();
+            }
             var origPos=new Float32Array(geo.attributes.position.array);
             var mat=new THREE.MeshPhongMaterial({
                 color:blobColors[fi],emissive:blobColors[fi],
@@ -3187,26 +3194,46 @@ function tickTieDye3D(){
         b.vy+=Math.cos(now*0.4+b.seed*1.3)*0.03*dt;
         b.vz+=Math.sin(now*0.3+b.seed*0.7)*0.01*dt;
 
-        /* Tentacles attracted to their parent body blob surface */
+        /* Tentacles: anchor top to body bottom, gravity pulls tip down */
         if(b.partIndex>0){
             var PARTS_PER=slimePts.length;
-            var bodyIdx=b.groupIndex*PARTS_PER; /* body is part 0 of each group */
+            var bodyIdx=b.groupIndex*PARTS_PER;
             var body=tieDyeBlobs3D[bodyIdx];
-            var dx=body.px-b.px, dy=body.py-b.py, dz=body.pz-b.pz;
-            var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
-            /* Attract toward body surface (not center) */
-            var surfaceDist=dist-body.radius*body.baseScale.y*0.8;
-            if(surfaceDist>0.01){
-                var pull=1.5*surfaceDist*dt;
-                b.vx+=dx/dist*pull;
-                b.vy+=dy/dist*pull;
-                b.vz+=dz/dist*pull;
-            }else if(dist>0.001){
-                /* On or inside body — gentle push to stay on surface */
-                var nudge=0.3*dt;
-                b.vx-=dx/dist*nudge;
-                b.vy-=dy/dist*nudge;
-            }
+            /* Attachment point: offset from body center toward this tentacle's x */
+            var sp=slimePts[b.partIndex];
+            var attachX=body.px+sp.x*0.5;
+            var attachY=body.py-body.radius*body.baseScale.y*0.7;
+            var attachZ=body.pz;
+
+            /* Hard anchor: snap top of tentacle to attachment point */
+            b.px=attachX;
+            b.py=attachY;
+            b.pz=attachZ;
+            b.vx=0; b.vy=0; b.vz=0;
+
+            /* Gravity on the tip via rotation — swing angle accumulates */
+            if(!b._swingAngle) b._swingAngle=0;
+            if(!b._swingVel) b._swingVel=0;
+            /* Pendulum physics: gravity pulls tip down, damped */
+            var SWING_GRAV=0.8;
+            var SWING_DAMP=0.97;
+            var SWING_WANDER=0.15;
+            b._swingVel+=-Math.sin(b._swingAngle)*SWING_GRAV*dt;
+            b._swingVel+=Math.sin(now*0.4+b.seed)*SWING_WANDER*dt;
+            b._swingVel*=SWING_DAMP;
+            b._swingAngle+=b._swingVel*dt;
+            /* Clamp swing to reasonable range */
+            b._swingAngle=Math.max(-0.6,Math.min(0.6,b._swingAngle));
+            /* Z swing too */
+            if(!b._swingZ) b._swingZ=0;
+            if(!b._swingVelZ) b._swingVelZ=0;
+            b._swingVelZ+=-Math.sin(b._swingZ)*SWING_GRAV*0.5*dt;
+            b._swingVelZ+=Math.cos(now*0.3+b.seed*1.5)*SWING_WANDER*0.5*dt;
+            b._swingVelZ*=SWING_DAMP;
+            b._swingZ+=b._swingVelZ*dt;
+            b._swingZ=Math.max(-0.4,Math.min(0.4,b._swingZ));
+
+            b.mesh.rotation.set(b._swingZ, 0, b._swingAngle);
         }
 
         /* Repel from nearby blobs (prevents overlap, but not same-group body) */
