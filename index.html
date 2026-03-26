@@ -2471,8 +2471,8 @@ function deformSkin(skin,time){
         var nx=ox,ny=oy,nz=oz;
         var d=Math.sqrt(nx*nx+ny*ny+nz*nz);
         if(d>0.001){nx/=d;ny/=d;nz/=d;}
-        var wobble=1+0.12*Math.sin(time*1.1+nx*4+s)
-                    +0.08*Math.cos(time*0.8+ny*5+s*1.3);
+        var wobble=1+0.12*Math.sin(time*0.4+nx*4+s)
+                    +0.08*Math.cos(time*0.3+ny*5+s*1.3);
         /* Store as local coords (relative to mesh position) */
         pos.array[v*3]=(fx-skin.mesh.position.x)*wobble;
         pos.array[v*3+1]=(fy-skin.mesh.position.y)*wobble;
@@ -3230,7 +3230,7 @@ function tickTieDye3D(){
     var dt=Math.min(now-goopPhysicsLast,0.05);
     goopPhysicsLast=now;
 
-    var DRAG=0.97, HOME=0.8;
+    var DRAG=0.99, HOME=0.3;
 
     /* Pass 1: Update body anchors (type 0) */
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++){
@@ -3240,9 +3240,9 @@ function tickTieDye3D(){
         b.vx+=hx*HOME*dt;
         b.vy+=hy*HOME*dt;
         b.vz+=hz*HOME*dt;
-        b.vx+=Math.sin(now*0.5+b.seed)*0.03*dt;
-        b.vy+=Math.cos(now*0.4+b.seed*1.3)*0.03*dt;
-        b.vz+=Math.sin(now*0.3+b.seed*0.7)*0.01*dt;
+        b.vx+=Math.sin(now*0.15+b.seed)*0.01*dt;
+        b.vy+=Math.cos(now*0.12+b.seed*1.3)*0.01*dt;
+        b.vz+=Math.sin(now*0.1+b.seed*0.7)*0.004*dt;
         b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG;
         b.px+=b.vx*dt; b.py+=b.vy*dt; b.pz+=b.vz*dt;
     }
