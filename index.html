@@ -3164,44 +3164,18 @@ function tickTieDye3D(){
         b.vy+=Math.cos(now*0.25+b.seed*1.3)*0.02*dt;
         b.vz+=Math.sin(now*0.2+b.seed*0.7)*0.01*dt;
 
-        /* Blob-to-blob: same color attracts, different repels */
+        /* Blob-to-blob repulsion */
         for(var bj=bi+1;bj<tieDyeBlobs3D.length;bj++){
             var o=tieDyeBlobs3D[bj];
             var dx=b.px-o.px,dy=b.py-o.py,dz=b.pz-o.pz;
             var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
-            var sameColor=b.ci===o.ci;
             var minD=b.radius+o.radius+0.1;
-
-            if(sameColor){
-                /* Attract within range, merge on contact */
-                var attractR=minD*3.5;
-                if(dist<attractR&&dist>0.01){
-                    var pull=0.4*(1-dist/attractR)/dist*dt;
-                    b.vx-=dx*pull; b.vy-=dy*pull; b.vz-=dz*pull;
-                    o.vx+=dx*pull; o.vy+=dy*pull; o.vz+=dz*pull;
-                }
-                /* When overlapping, scale up both to simulate merge */
-                if(dist<minD){
-                    var overlap=1-dist/minD;
-                    b._merge=Math.min((b._merge||0)+overlap*0.1,0.6);
-                    o._merge=Math.min((o._merge||0)+overlap*0.1,0.6);
-                    /* Soft repel to prevent total collapse */
-                    var nudge=0.15*(minD-dist)/dist*dt;
-                    b.vx+=dx*nudge; b.vy+=dy*nudge; b.vz+=dz*nudge;
-                    o.vx-=dx*nudge; o.vy-=dy*nudge; o.vz-=dz*nudge;
-                }
-            }else{
-                /* Different colors repel */
-                if(dist<minD&&dist>0.01){
-                    var push=REPEL*(minD-dist)/dist*dt;
-                    b.vx+=dx*push; b.vy+=dy*push; b.vz+=dz*push;
-                    o.vx-=dx*push; o.vy-=dy*push; o.vz-=dz*push;
-                }
+            if(dist<minD&&dist>0.01){
+                var push=REPEL*(minD-dist)/dist*dt;
+                b.vx+=dx*push; b.vy+=dy*push; b.vz+=dz*push;
+                o.vx-=dx*push; o.vy-=dy*push; o.vz-=dz*push;
             }
         }
-
-        /* Decay merge scale back toward 0 when apart (stretchy pull-apart) */
-        b._merge=(b._merge||0)*0.96;
 
         /* Drag */
         b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG;
@@ -3217,13 +3191,11 @@ function tickTieDye3D(){
         if(b.pz<BZmin){b.pz=BZmin;b.vz=Math.abs(b.vz)*0.3;}
         if(b.pz>BZmax){b.pz=BZmax;b.vz=-Math.abs(b.vz)*0.3;}
 
-        /* Apply to mesh — scale up when merging */
-        var ms=1+(b._merge||0);
+        /* Apply to mesh */
         b.mesh.position.set(b.px,b.py,b.pz);
-        b.mesh.scale.setScalar(ms);
         b.mesh.rotation.x+=b.vy*0.3;
         b.mesh.rotation.y+=b.vx*0.3;
-        b.mesh.material.opacity=0.38+Math.sin(now*0.4+bi)*0.07+(b._merge||0)*0.15;
+        b.mesh.material.opacity=0.38+Math.sin(now*0.4+bi)*0.07;
         wobbleGoopVerts(b,now);
     }
     var now=performance.now()*0.001;
