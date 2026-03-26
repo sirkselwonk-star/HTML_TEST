@@ -2169,6 +2169,7 @@ function makeBackTex(col,bgCol){
     bx.fillStyle=col; bx.font='bold 26px Georgia,serif';
     bx.textAlign='center'; bx.textBaseline='middle';
     bx.fillText('SLIME',sz/2,sz-16);
+    if(_backTexObj)_backTexObj.dispose();
     _backTexObj=new THREE.CanvasTexture(bc);
     return _backTexObj;
 }
@@ -3175,8 +3176,8 @@ class GoopBlob{
     }
     ctx.beginPath();
     ctx.moveTo((pts[0].x+pts[N-1].x)/2,(pts[0].y+pts[N-1].y)/2);
-    for(var i=0;i<N;i++){
-      var p=pts[i],pn=pts[(i+1)%N];
+    for(var j=0;j<N;j++){
+      var p=pts[j],pn=pts[(j+1)%N];
       ctx.quadraticCurveTo(p.x,p.y,(p.x+pn.x)/2,(p.y+pn.y)/2);
     }
     ctx.closePath();ctx.fill();
@@ -3402,7 +3403,7 @@ var searchActive=false;
 function searchSlime(){
     var q=document.getElementById('search-input').value.trim().replace(/^#/,'');
     var num=parseInt(q);
-    if(!num&&num!==0){return;}
+    if(isNaN(num)){return;}
     var idx=-1;
     for(var i=0;i<images.length;i++){
         var m=images[i].title.match(/\d+/);
