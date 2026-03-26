@@ -3467,13 +3467,14 @@ function markCardForSale(card){
     w.appendChild(b);
     card.appendChild(w);
 }
-function checkCardForSale(card){
+function checkCardForSale(card,done){
     var label=card.querySelector('.card-label');
-    if(!label)return;
+    if(!label){if(done)done();return;}
     var serial=parseInt((label.textContent.match(/\d+/)||[])[0]);
-    if(!serial)return;
+    if(!serial){if(done)done();return;}
     if(spenderCache[serial]!==undefined){
         if(spenderCache[serial]===SENTX_ACCT)markCardForSale(card);
+        if(done)done();
         return;
     }
     fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
@@ -3482,11 +3483,27 @@ function checkCardForSale(card){
             spenderCache[serial]=d.spender||null;
             if(d.spender===SENTX_ACCT)markCardForSale(card);
         })
-        .catch(function(){});
+        .catch(function(){})
+        .then(function(){if(done)done();});
 }
+var _saleCheckGen=0; /* generation counter — new page invalidates in-flight batch */
 function checkPageForSale(){
-    var cards=document.querySelectorAll('#gallery-grid .card');
-    cards.forEach(checkCardForSale);
+    var gen=++_saleCheckGen;
+    var cards=Array.prototype.slice.call(document.querySelectorAll('#gallery-grid .card'));
+    var BATCH=5, i=0;
+    function nextBatch(){
+        if(gen!==_saleCheckGen||i>=cards.length)return;
+        var batch=cards.slice(i,i+BATCH);
+        i+=batch.length;
+        var pending=batch.length;
+        batch.forEach(function(card){
+            checkCardForSale(card,function(){
+                pending--;
+                if(pending<=0)setTimeout(nextBatch,0);
+            });
+        });
+    }
+    nextBatch();
 }
 renderPage(0);
 switchFrame(parseInt(document.getElementById('frame-sel').value)||0);
