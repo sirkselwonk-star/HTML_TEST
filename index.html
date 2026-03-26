@@ -3467,13 +3467,14 @@ function markCardForSale(card){
     w.appendChild(b);
     card.appendChild(w);
 }
-function checkCardForSale(card){
+function checkCardForSale(card,done){
     var label=card.querySelector('.card-label');
-    if(!label)return;
+    if(!label){if(done)done();return;}
     var serial=parseInt((label.textContent.match(/\d+/)||[])[0]);
-    if(!serial)return;
+    if(!serial){if(done)done();return;}
     if(spenderCache[serial]!==undefined){
         if(spenderCache[serial]===SENTX_ACCT)markCardForSale(card);
+        if(done)done();
         return;
     }
     fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
@@ -3482,11 +3483,27 @@ function checkCardForSale(card){
             spenderCache[serial]=d.spender||null;
             if(d.spender===SENTX_ACCT)markCardForSale(card);
         })
-        .catch(function(){});
+        .catch(function(){})
+        .then(function(){if(done)done();});
 }
+var _saleCheckGen=0; /* generation counter — new page invalidates in-flight batch */
 function checkPageForSale(){
-    var cards=document.querySelectorAll('#gallery-grid .card');
-    cards.forEach(checkCardForSale);
+    var gen=++_saleCheckGen;
+    var cards=Array.prototype.slice.call(document.querySelectorAll('#gallery-grid .card'));
+    var BATCH=5, i=0;
+    function nextBatch(){
+        if(gen!==_saleCheckGen||i>=cards.length)return;
+        var batch=cards.slice(i,i+BATCH);
+        i+=batch.length;
+        var pending=batch.length;
+        batch.forEach(function(card){
+            checkCardForSale(card,function(){
+                pending--;
+                if(pending<=0)setTimeout(nextBatch,0);
+            });
+        });
+    }
+    nextBatch();
 }
 renderPage(0);
 switchFrame(parseInt(document.getElementById('frame-sel').value)||0);
@@ -3523,6 +3540,108 @@ function getGifWorkerURL(cb){
         .catch(function(e){cb(null,e);});
 }
 
+/* ── Shared export helpers ── */
+function setSceneToS(s){
+    pivot.rotation.y=2*Math.PI*s;
+    pivot.rotation.x=0;
+    pivot.position.y=panelYOffset+Math.sin(2*Math.PI*s)*.03;
+    if(pointOn){
+        point.position.x=Math.cos(2*Math.PI*s)*3.5;
+        point.position.y=1+Math.sin(2*Math.PI*s)*1.2;
+        point.position.z=3+Math.sin(2*Math.PI*s);
+        point.intensity=pointIntScale*(0.8+Math.sin(4*Math.PI*s)*.18);
+    }
+    coinMesh.rotation.x=Math.PI/2+coinXTilt;
+    coinMesh.rotation.y=coinYTilt;
+    coinMesh.rotation.z=4*Math.PI*s;
+    backCoin3D.rotation.x=-Math.PI/2;
+    backCoin3D.rotation.y=0;
+    backCoin3D.rotation.z=0;
+    backCoin3D.scale.set(backCoinScale,1,backCoinScale);
+    camera.position.z=zoom;
+}
+function syncMistToFrame(tE){
+    if(mistOn&&mistTextures.length){
+        mistTextures[0].offset.set(tE*mistSpeed*0.012,tE*mistSpeed*0.009);
+        if(mistTextures[1])mistTextures[1].offset.set(-tE*mistSpeed*0.009,tE*mistSpeed*0.013);
+        if(mistTextures[2])mistTextures[2].offset.set(tE*mistSpeed*0.007+Math.sin(tE*0.4)*mistSpeed*0.018,-tE*mistSpeed*0.011);
+    }
+}
+function saveExportState(EXPORTW,EXPORTH,aspectOverride){
+    var _animating=animating,_rotY=rotY,_rotX=rotX;
+    var _pivY=pivot.rotation.y,_pivX=pivot.rotation.x,_pivPosY=pivot.position.y;
+    animating=false;
+    var _dpr=renderer.getPixelRatio();
+    var _W=renderer.domElement.width/_dpr,_H=renderer.domElement.height/_dpr;
+    renderer.setPixelRatio(1);
+    renderer.setSize(EXPORTW,EXPORTH);
+    camera.aspect=aspectOverride||(EXPORTW/EXPORTH); camera.updateProjectionMatrix();
+    var tmpC=document.createElement('canvas'); tmpC.width=EXPORTW; tmpC.height=EXPORTH;
+    var tmpX=tmpC.getContext('2d');
+    return {tmpC:tmpC,tmpX:tmpX,restore:function(ov){
+        renderer.setPixelRatio(_dpr);
+        renderer.setSize(_W,_H);
+        camera.aspect=_W/_H; camera.updateProjectionMatrix();
+        rotY=_rotY; rotX=_rotX;
+        pivot.rotation.y=_pivY; pivot.rotation.x=_pivX;
+        pivot.position.y=_pivPosY;
+        animating=_animating;
+        if(animating) animate();
+        if(ov&&ov.parentNode) ov.parentNode.removeChild(ov);
+    }};
+}
+function makeHUDBlitter(EXPORTW,EXPORTH,tmpX,itemIndex){
+    var idx=(itemIndex!==undefined)?itemIndex:cur;
+    var _sc=EXPORTW/800;
+    var _halfH=Math.tan(40*Math.PI/360)*5.0;
+    var _ndcY=(panelYOffset-1.35)/_halfH;
+    var _titleWrapY=Math.round(EXPORTH*(1-(_ndcY+1)/2))+Math.round(42*_sc);
+    var _titleStr=(images[idx].title||'').toUpperCase();
+    var _cntStr='RARITY : '+(idx+1)+' / '+images.length;
+    var _bottomCY=_titleWrapY+Math.round(58*_sc);
+    var _coinR=Math.round(miniCoinSz/2*_sc);
+    var _coinCX=EXPORTW/2+Math.round(40*_sc),_coinCY=_bottomCY;
+    return function blitHUD(){
+        miniRenderer.render(miniScene,miniCamera);
+        tmpX.save();
+        tmpX.font='bold '+Math.round(hudTitlePx*_sc)+'px "Segoe UI",system-ui,sans-serif';
+        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2;
+        tmpX.shadowColor='rgba('+COLOR_THEMES[currentTheme].neonGlow+',0.45)';
+        tmpX.shadowBlur=Math.round(hudTitlePx*_sc);
+        tmpX.textAlign='center'; tmpX.textBaseline='top';
+        tmpX.fillText(_titleStr,EXPORTW/2,_titleWrapY); tmpX.restore();
+        tmpX.save();
+        tmpX.font='bold '+Math.round(hudCounterPx*_sc)+'px "Segoe UI",system-ui,sans-serif';
+        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2; tmpX.textAlign='right'; tmpX.textBaseline='middle';
+        tmpX.fillText(_cntStr,EXPORTW/2-Math.round(7*_sc),_bottomCY); tmpX.restore();
+        tmpX.save();
+        tmpX.beginPath(); tmpX.arc(_coinCX,_coinCY,_coinR,0,Math.PI*2); tmpX.clip();
+        tmpX.globalAlpha=0.92;
+        tmpX.drawImage(miniRenderer.domElement,_coinCX-_coinR,_coinCY-_coinR,_coinR*2,_coinR*2);
+        tmpX.restore();
+        if(sqNeonOn){
+            tmpX.save();
+            var _ni=sqNeonInset*_sc,_nw=sqNeonBW*_sc,_ng=sqNeonGlow*_sc;
+            tmpX.strokeStyle=sqNeonColorHex; tmpX.lineWidth=_nw;
+            tmpX.shadowColor=sqNeonColorHex; tmpX.shadowBlur=_ng;
+            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
+            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
+            tmpX.restore();
+        }
+    };
+}
+function compositeExportFrame(tmpX,EXPORTW,EXPORTH,blitHUD){
+    renderer.render(scene,camera);
+    tmpX.clearRect(0,0,EXPORTW,EXPORTH);
+    var _gb=GOOP_CFG.zLayer==='-1';
+    if(_gb){tmpX.fillStyle=COLOR_THEMES[currentTheme].bg;tmpX.fillRect(0,0,EXPORTW,EXPORTH);blitGoopExport(tmpX,EXPORTW,EXPORTH);}
+    tmpX.drawImage(renderer.domElement,0,0);
+    if(!_gb)blitGoopExport(tmpX,EXPORTW,EXPORTH);
+    drawEdgeGlow(tmpX,EXPORTW,EXPORTH);
+    drawFlareOnto(tmpX,EXPORTW,EXPORTH);
+    blitHUD();
+}
+
 /* ── Video Export (WebM/VP9 → convert to GIF via gifski or ffmpeg) ── */
 function syncMp4ResToGif(){
     var v=document.getElementById('gif-res').value;
@@ -3553,97 +3672,10 @@ function startVideoExport(){
         +'<div style="font-size:.5rem;letter-spacing:.12em;color:#2d5c32;margin-top:4px">Phase 1: render video &nbsp;\u2192&nbsp; Phase 2: convert to GIF</div>';
     document.body.appendChild(ov);
 
-    /* save state */
-    var _animating=animating,_rotY=rotY,_rotX=rotX;
-    var _pivY=pivot.rotation.y,_pivX=pivot.rotation.x,_pivPosY=pivot.position.y;
-    animating=false;
-    var _dpr=renderer.getPixelRatio();
-    var _W=renderer.domElement.width/_dpr,_H=renderer.domElement.height/_dpr;
-    renderer.setPixelRatio(1);
-    renderer.setSize(EXPORTW,EXPORTH);
-    camera.aspect=1; camera.updateProjectionMatrix();
-
-    var tmpC=document.createElement('canvas'); tmpC.width=EXPORTW; tmpC.height=EXPORTH;
-    var tmpX=tmpC.getContext('2d');
-
-    function restore(){
-        renderer.setPixelRatio(_dpr);
-        renderer.setSize(_W,_H);
-        camera.aspect=_W/_H; camera.updateProjectionMatrix();
-        rotY=_rotY; rotX=_rotX;
-        pivot.rotation.y=_pivY; pivot.rotation.x=_pivX;
-        pivot.position.y=_pivPosY;
-        animating=_animating;
-        if(animating) animate();
-        document.body.removeChild(ov);
-    }
-
-    /* scene helper */
-    function setSceneToS(s){
-        pivot.rotation.y=2*Math.PI*s;
-        pivot.rotation.x=0;
-        pivot.position.y=panelYOffset+Math.sin(2*Math.PI*s)*.03;
-        if(pointOn){
-            point.position.x=Math.cos(2*Math.PI*s)*3.5;
-            point.position.y=1+Math.sin(2*Math.PI*s)*1.2;
-            point.position.z=3+Math.sin(2*Math.PI*s);
-            point.intensity=pointIntScale*(0.8+Math.sin(4*Math.PI*s)*.18);
-        }
-        coinMesh.rotation.x=Math.PI/2+coinXTilt;
-        coinMesh.rotation.y=coinYTilt;
-        coinMesh.rotation.z=4*Math.PI*s;
-        backCoin3D.rotation.x=-Math.PI/2;
-        backCoin3D.rotation.y=0;
-        backCoin3D.rotation.z=0;
-        backCoin3D.scale.set(backCoinScale,1,backCoinScale);
-        camera.position.z=zoom;
-    }
-
-    /* HUD helper — all sizes scaled relative to 800px native resolution */
-    var _sc=EXPORTW/800;
-    var _halfH=Math.tan(40*Math.PI/360)*5.0;
-    var _ndcY=(panelYOffset-1.35)/_halfH;
-    var _titleWrapY=Math.round(EXPORTH*(1-(_ndcY+1)/2))+Math.round(42*_sc);
-    var _titleStr=(images[cur].title||'').toUpperCase();
-    var _cntStr='RARITY : '+(cur+1)+' / '+images.length;
-    var _bottomCY=_titleWrapY+Math.round(58*_sc);
-    var _coinR=Math.round(miniCoinSz/2*_sc);
-    var _coinCX=EXPORTW/2+Math.round(40*_sc),_coinCY=_bottomCY;
-    function blitHUD(){
-        miniRenderer.render(miniScene,miniCamera);
-        tmpX.save();
-        tmpX.font='bold '+Math.round(hudTitlePx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2;
-        tmpX.shadowColor='rgba('+COLOR_THEMES[currentTheme].neonGlow+',0.45)';
-        tmpX.shadowBlur=Math.round(hudTitlePx*_sc);
-        tmpX.textAlign='center';
-        tmpX.textBaseline='top';
-        tmpX.fillText(_titleStr,EXPORTW/2,_titleWrapY);
-        tmpX.restore();
-        tmpX.save();
-        tmpX.font='bold '+Math.round(hudCounterPx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2;
-        tmpX.textAlign='right';
-        tmpX.textBaseline='middle';
-        tmpX.fillText(_cntStr,EXPORTW/2-Math.round(7*_sc),_bottomCY);
-        tmpX.restore();
-        tmpX.save();
-        tmpX.beginPath();
-        tmpX.arc(_coinCX,_coinCY,_coinR,0,Math.PI*2);
-        tmpX.clip();
-        tmpX.globalAlpha=0.92;
-        tmpX.drawImage(miniRenderer.domElement,_coinCX-_coinR,_coinCY-_coinR,_coinR*2,_coinR*2);
-        tmpX.restore();
-        if(sqNeonOn){
-            tmpX.save();
-            var _ni=sqNeonInset*_sc,_nw=sqNeonBW*_sc,_ng=sqNeonGlow*_sc;
-            tmpX.strokeStyle=sqNeonColorHex; tmpX.lineWidth=_nw;
-            tmpX.shadowColor=sqNeonColorHex; tmpX.shadowBlur=_ng;
-            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-            tmpX.restore();
-        }
-    }
+    var st=saveExportState(EXPORTW,EXPORTH,1); /* aspect=1 for square GIF */
+    var tmpC=st.tmpC, tmpX=st.tmpX;
+    function restore(){st.restore(ov);}
+    var blitHUD=makeHUDBlitter(EXPORTW,EXPORTH,tmpX);
 
     /* MediaRecorder on the composite 2D canvas */
     var stream=tmpC.captureStream(0); // 0 = manual frame push via requestFrame()
@@ -3756,25 +3788,10 @@ function startVideoExport(){
             return;
         }
         setSceneToS(frame/TOTAL);
-        /* sync mist UV drift to match live animation timing */
-        if(mistOn&&mistTextures.length){
-            var tE=frame*0.008;
-            mistTextures[0].offset.set(tE*mistSpeed*0.012,tE*mistSpeed*0.009);
-            if(mistTextures[1])mistTextures[1].offset.set(-tE*mistSpeed*0.009,tE*mistSpeed*0.013);
-            if(mistTextures[2])mistTextures[2].offset.set(tE*mistSpeed*0.007+Math.sin(tE*0.4)*mistSpeed*0.018,-tE*mistSpeed*0.011);
-        }
-        /* sync dot glows using synthetic timestamp */
+        syncMistToFrame(frame*0.008);
         updateSlimeWall(frame*(DURATION*1000/TOTAL));
-        renderer.render(scene,camera);
-        tmpX.clearRect(0,0,EXPORTW,EXPORTH);
-        var _gb=GOOP_CFG.zLayer==='-1';
-        if(_gb){tmpX.fillStyle=COLOR_THEMES[currentTheme].bg;tmpX.fillRect(0,0,EXPORTW,EXPORTH);blitGoopExport(tmpX,EXPORTW,EXPORTH);}
-        tmpX.drawImage(renderer.domElement,0,0);
-        if(!_gb)blitGoopExport(tmpX,EXPORTW,EXPORTH);
-        drawEdgeGlow(tmpX,EXPORTW,EXPORTH);
-        drawFlareOnto(tmpX,EXPORTW,EXPORTH);
-        blitHUD();
-        videoTrack.requestFrame(); // push this canvas state into the VP9 stream
+        compositeExportFrame(tmpX,EXPORTW,EXPORTH,blitHUD);
+        videoTrack.requestFrame();
         frame++;
         document.getElementById('gif-count').textContent=frame+' / '+TOTAL;
         document.getElementById('gif-bar').style.width=(frame/TOTAL*100)+'%';
@@ -3837,97 +3854,10 @@ function startMp4Export(){
         +'</div>';
     document.body.appendChild(ov);
 
-    /* save state */
-    var _animating=animating,_rotY=rotY,_rotX=rotX;
-    var _pivY=pivot.rotation.y,_pivX=pivot.rotation.x,_pivPosY=pivot.position.y;
-    animating=false;
-    var _dpr=renderer.getPixelRatio();
-    var _W=renderer.domElement.width/_dpr,_H=renderer.domElement.height/_dpr;
-    renderer.setPixelRatio(1);
-    renderer.setSize(EXPORTW,EXPORTH);
-    camera.aspect=EXPORTW/EXPORTH; camera.updateProjectionMatrix();
-
-    var tmpC=document.createElement('canvas'); tmpC.width=EXPORTW; tmpC.height=EXPORTH;
-    var tmpX=tmpC.getContext('2d');
-
-    function restore(){
-        renderer.setPixelRatio(_dpr);
-        renderer.setSize(_W,_H);
-        camera.aspect=_W/_H; camera.updateProjectionMatrix();
-        rotY=_rotY; rotX=_rotX;
-        pivot.rotation.y=_pivY; pivot.rotation.x=_pivX;
-        pivot.position.y=_pivPosY;
-        animating=_animating;
-        if(animating) animate();
-        document.body.removeChild(ov);
-    }
-
-    /* HUD — all sizes scaled proportionally to 1080 vs 800 base */
-    var _sc=EXPORTW/800;
-    var _halfH=Math.tan(40*Math.PI/360)*5.0;
-    var _ndcY=(panelYOffset-1.35)/_halfH;
-    var _titleWrapY=Math.round(EXPORTH*(1-(_ndcY+1)/2))+Math.round(42*_sc);
-    var _titleStr=(images[cur].title||'').toUpperCase();
-    var _cntStr='RARITY : '+(cur+1)+' / '+images.length;
-    var _bottomCY=_titleWrapY+Math.round(58*_sc);
-    var _coinR=Math.round(miniCoinSz/2*_sc);
-    var _coinCX=EXPORTW/2+Math.round(40*_sc),_coinCY=_bottomCY;
-    function blitHUD(){
-        miniRenderer.render(miniScene,miniCamera);
-        tmpX.save();
-        tmpX.font='bold '+Math.round(hudTitlePx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2;
-        tmpX.shadowColor='rgba('+COLOR_THEMES[currentTheme].neonGlow+',0.45)';
-        tmpX.shadowBlur=Math.round(hudTitlePx*_sc);
-        tmpX.textAlign='center';
-        tmpX.textBaseline='top';
-        tmpX.fillText(_titleStr,EXPORTW/2,_titleWrapY);
-        tmpX.restore();
-        tmpX.save();
-        tmpX.font='bold '+Math.round(hudCounterPx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2;
-        tmpX.textAlign='right';
-        tmpX.textBaseline='middle';
-        tmpX.fillText(_cntStr,EXPORTW/2-Math.round(7*_sc),_bottomCY);
-        tmpX.restore();
-        tmpX.save();
-        tmpX.beginPath();
-        tmpX.arc(_coinCX,_coinCY,_coinR,0,Math.PI*2);
-        tmpX.clip();
-        tmpX.globalAlpha=0.92;
-        tmpX.drawImage(miniRenderer.domElement,_coinCX-_coinR,_coinCY-_coinR,_coinR*2,_coinR*2);
-        tmpX.restore();
-        if(sqNeonOn){
-            tmpX.save();
-            var _ni=sqNeonInset*_sc,_nw=sqNeonBW*_sc,_ng=sqNeonGlow*_sc;
-            tmpX.strokeStyle=sqNeonColorHex; tmpX.lineWidth=_nw;
-            tmpX.shadowColor=sqNeonColorHex; tmpX.shadowBlur=_ng;
-            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-            tmpX.restore();
-        }
-    }
-
-    /* scene helper — identical to startVideoExport */
-    function setSceneToS(s){
-        pivot.rotation.y=2*Math.PI*s;
-        pivot.rotation.x=0;
-        pivot.position.y=panelYOffset+Math.sin(2*Math.PI*s)*.03;
-        if(pointOn){
-            point.position.x=Math.cos(2*Math.PI*s)*3.5;
-            point.position.y=1+Math.sin(2*Math.PI*s)*1.2;
-            point.position.z=3+Math.sin(2*Math.PI*s);
-            point.intensity=pointIntScale*(0.8+Math.sin(4*Math.PI*s)*.18);
-        }
-        coinMesh.rotation.x=Math.PI/2+coinXTilt;
-        coinMesh.rotation.y=coinYTilt;
-        coinMesh.rotation.z=4*Math.PI*s;
-        backCoin3D.rotation.x=-Math.PI/2;
-        backCoin3D.rotation.y=0;
-        backCoin3D.rotation.z=0;
-        backCoin3D.scale.set(backCoinScale,1,backCoinScale);
-        camera.position.z=zoom;
-    }
+    var st=saveExportState(EXPORTW,EXPORTH);
+    var tmpC=st.tmpC, tmpX=st.tmpX;
+    function restore(){st.restore(ov);}
+    var blitHUD=makeHUDBlitter(EXPORTW,EXPORTH,tmpX);
 
     /* MediaRecorder — bitrate from export quality selector */
     var stream=tmpC.captureStream(0);
@@ -3965,22 +3895,9 @@ function startMp4Export(){
             return;
         }
         setSceneToS(frame/TOTAL);
-        if(mistOn&&mistTextures.length){
-            var tE=frame*0.008;
-            mistTextures[0].offset.set(tE*mistSpeed*0.012,tE*mistSpeed*0.009);
-            if(mistTextures[1])mistTextures[1].offset.set(-tE*mistSpeed*0.009,tE*mistSpeed*0.013);
-            if(mistTextures[2])mistTextures[2].offset.set(tE*mistSpeed*0.007+Math.sin(tE*0.4)*mistSpeed*0.018,-tE*mistSpeed*0.011);
-        }
+        syncMistToFrame(frame*0.008);
         updateSlimeWall(frame*(DURATION*1000/TOTAL));
-        renderer.render(scene,camera);
-        tmpX.clearRect(0,0,EXPORTW,EXPORTH);
-        var _gb=GOOP_CFG.zLayer==='-1';
-        if(_gb){tmpX.fillStyle=COLOR_THEMES[currentTheme].bg;tmpX.fillRect(0,0,EXPORTW,EXPORTH);blitGoopExport(tmpX,EXPORTW,EXPORTH);}
-        tmpX.drawImage(renderer.domElement,0,0);
-        if(!_gb)blitGoopExport(tmpX,EXPORTW,EXPORTH);
-        drawEdgeGlow(tmpX,EXPORTW,EXPORTH);
-        drawFlareOnto(tmpX,EXPORTW,EXPORTH);
-        blitHUD();
+        compositeExportFrame(tmpX,EXPORTW,EXPORTH,blitHUD);
         videoTrack.requestFrame();
         frame++;
         document.getElementById('gif-count').textContent=frame+' / '+TOTAL;
@@ -4150,82 +4067,10 @@ function startFastGifExport(){
             +EXPORTW+'\u00d7'+EXPORTH+' \u00b7 Fast GIF \u00b7 '+GIF_FPS+' fps \u00b7 '+GIF_TOTAL+' frames</div>';
         document.body.appendChild(ov);
 
-        /* save renderer state */
-        var _animating=animating,_rotY=rotY,_rotX=rotX;
-        var _pivY=pivot.rotation.y,_pivX=pivot.rotation.x,_pivPosY=pivot.position.y;
-        animating=false;
-        var _dpr=renderer.getPixelRatio();
-        var _W=renderer.domElement.width/_dpr,_H=renderer.domElement.height/_dpr;
-        renderer.setPixelRatio(1);
-        renderer.setSize(EXPORTW,EXPORTH);
-        camera.aspect=EXPORTW/EXPORTH; camera.updateProjectionMatrix();
-
-        var tmpC=document.createElement('canvas'); tmpC.width=EXPORTW; tmpC.height=EXPORTH;
-        var tmpX=tmpC.getContext('2d');
-
-        function restore(){
-            renderer.setPixelRatio(_dpr); renderer.setSize(_W,_H);
-            camera.aspect=_W/_H; camera.updateProjectionMatrix();
-            rotY=_rotY; rotX=_rotX;
-            pivot.rotation.y=_pivY; pivot.rotation.x=_pivX; pivot.position.y=_pivPosY;
-            animating=_animating;
-            if(animating)animate();
-            document.body.removeChild(ov);
-        }
-
-        /* HUD */
-        var _sc=EXPORTW/800;
-        var _halfH=Math.tan(40*Math.PI/360)*5.0;
-        var _ndcY=(panelYOffset-1.35)/_halfH;
-        var _titleWrapY=Math.round(EXPORTH*(1-(_ndcY+1)/2))+Math.round(42*_sc);
-        var _titleStr=(images[cur].title||'').toUpperCase();
-        var _cntStr='RARITY : '+(cur+1)+' / '+images.length;
-        var _bottomCY=_titleWrapY+Math.round(58*_sc);
-        var _coinR=Math.round(miniCoinSz/2*_sc);
-        var _coinCX=EXPORTW/2+Math.round(40*_sc),_coinCY=_bottomCY;
-        function blitHUD(){
-            miniRenderer.render(miniScene,miniCamera);
-            tmpX.save();
-            tmpX.font='bold '+Math.round(hudTitlePx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-            tmpX.fillStyle=COLOR_THEMES[currentTheme].green2; tmpX.shadowColor='rgba('+COLOR_THEMES[currentTheme].neonGlow+',0.45)';
-            tmpX.shadowBlur=Math.round(hudTitlePx*_sc);
-            tmpX.textAlign='center'; tmpX.textBaseline='top';
-            tmpX.fillText(_titleStr,EXPORTW/2,_titleWrapY); tmpX.restore();
-            tmpX.save();
-            tmpX.font='bold '+Math.round(hudCounterPx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-            tmpX.fillStyle=COLOR_THEMES[currentTheme].green2; tmpX.textAlign='right'; tmpX.textBaseline='middle';
-            tmpX.fillText(_cntStr,EXPORTW/2-Math.round(7*_sc),_bottomCY); tmpX.restore();
-            tmpX.save();
-            tmpX.beginPath(); tmpX.arc(_coinCX,_coinCY,_coinR,0,Math.PI*2); tmpX.clip();
-            tmpX.globalAlpha=0.92;
-            tmpX.drawImage(miniRenderer.domElement,_coinCX-_coinR,_coinCY-_coinR,_coinR*2,_coinR*2);
-            tmpX.restore();
-            if(sqNeonOn){
-                tmpX.save();
-                var _ni=sqNeonInset*_sc,_nw=sqNeonBW*_sc,_ng=sqNeonGlow*_sc;
-                tmpX.strokeStyle=sqNeonColorHex; tmpX.lineWidth=_nw;
-                tmpX.shadowColor=sqNeonColorHex; tmpX.shadowBlur=_ng;
-                tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-                tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-                tmpX.restore();
-            }
-        }
-
-        function setSceneToS(s){
-            pivot.rotation.y=2*Math.PI*s; pivot.rotation.x=0;
-            pivot.position.y=panelYOffset+Math.sin(2*Math.PI*s)*.03;
-            if(pointOn){
-                point.position.x=Math.cos(2*Math.PI*s)*3.5;
-                point.position.y=1+Math.sin(2*Math.PI*s)*1.2;
-                point.position.z=3+Math.sin(2*Math.PI*s);
-                point.intensity=pointIntScale*(0.8+Math.sin(4*Math.PI*s)*.18);
-            }
-            coinMesh.rotation.x=Math.PI/2+coinXTilt; coinMesh.rotation.y=coinYTilt;
-            coinMesh.rotation.z=4*Math.PI*s;
-            backCoin3D.rotation.x=-Math.PI/2; backCoin3D.rotation.y=0; backCoin3D.rotation.z=0;
-            backCoin3D.scale.set(backCoinScale,1,backCoinScale);
-            camera.position.z=zoom;
-        }
+        var st=saveExportState(EXPORTW,EXPORTH);
+        var tmpC=st.tmpC, tmpX=st.tmpX;
+        function restore(){st.restore(ov);}
+        var blitHUD=makeHUDBlitter(EXPORTW,EXPORTH,tmpX);
 
         /* fetch gif.js worker, render all frames, then encode */
         document.getElementById('gif-phase').textContent='Fetching encoder\u2026';
@@ -4266,23 +4111,9 @@ function startFastGifExport(){
                         return;
                     }
                     setSceneToS(frame/GIF_TOTAL);
-                    /* mist: tE scaled to match 60 fps animation timing across any GIF_FPS */
-                    if(mistOn&&mistTextures.length){
-                        var tE=frame*(0.48/GIF_FPS);
-                        mistTextures[0].offset.set(tE*mistSpeed*0.012,tE*mistSpeed*0.009);
-                        if(mistTextures[1])mistTextures[1].offset.set(-tE*mistSpeed*0.009,tE*mistSpeed*0.013);
-                        if(mistTextures[2])mistTextures[2].offset.set(tE*mistSpeed*0.007+Math.sin(tE*0.4)*mistSpeed*0.018,-tE*mistSpeed*0.011);
-                    }
+                    syncMistToFrame(frame*(0.48/GIF_FPS));
                     updateSlimeWall(frame*(DURATION*1000/GIF_TOTAL));
-                    renderer.render(scene,camera);
-                    tmpX.clearRect(0,0,EXPORTW,EXPORTH);
-                    var _gb=GOOP_CFG.zLayer==='-1';
-                    if(_gb){tmpX.fillStyle=COLOR_THEMES[currentTheme].bg;tmpX.fillRect(0,0,EXPORTW,EXPORTH);blitGoopExport(tmpX,EXPORTW,EXPORTH);}
-                    tmpX.drawImage(renderer.domElement,0,0);
-                    if(!_gb)blitGoopExport(tmpX,EXPORTW,EXPORTH);
-                    drawEdgeGlow(tmpX,EXPORTW,EXPORTH);
-                    drawFlareOnto(tmpX,EXPORTW,EXPORTH);
-                    blitHUD();
+                    compositeExportFrame(tmpX,EXPORTW,EXPORTH,blitHUD);
                     gif.addFrame(tmpC,{delay:GIF_DELAY,copy:true});
                     frame++;
                     document.getElementById('gif-count').textContent=frame+' / '+GIF_TOTAL;
@@ -4412,76 +4243,10 @@ function exportBatchItem(idx,format,dirHandle,onDone){
     var fname=_slug+'.'+fileExt;
 
     /* resize renderer for export */
-    var _dpr=renderer.getPixelRatio();
-    var _W=renderer.domElement.width/_dpr,_H=renderer.domElement.height/_dpr;
-    var _rotY_=rotY,_rotX_=rotX;
-    var _pivY=pivot.rotation.y,_pivX=pivot.rotation.x,_pivPosY=pivot.position.y;
-    renderer.setPixelRatio(1);
-    renderer.setSize(EXPORTW,EXPORTH);
-    camera.aspect=EXPORTW/EXPORTH; camera.updateProjectionMatrix();
-    var tmpC=document.createElement('canvas'); tmpC.width=EXPORTW; tmpC.height=EXPORTH;
-    var tmpX=tmpC.getContext('2d');
-
-    function restoreState(){
-        renderer.setPixelRatio(_dpr); renderer.setSize(_W,_H);
-        camera.aspect=_W/_H; camera.updateProjectionMatrix();
-        rotY=_rotY_; rotX=_rotX_;
-        pivot.rotation.y=_pivY; pivot.rotation.x=_pivX; pivot.position.y=_pivPosY;
-    }
-
-    /* HUD — same maths as individual exports */
-    var _sc=EXPORTW/800;
-    var _halfH=Math.tan(40*Math.PI/360)*5.0;
-    var _ndcY=(panelYOffset-1.35)/_halfH;
-    var _titleWrapY=Math.round(EXPORTH*(1-(_ndcY+1)/2))+Math.round(42*_sc);
-    var _titleStr=(images[idx].title||'').toUpperCase();
-    var _cntStr='RARITY : '+(idx+1)+' / '+images.length;
-    var _bottomCY=_titleWrapY+Math.round(58*_sc);
-    var _coinR=Math.round(miniCoinSz/2*_sc);
-    var _coinCX=EXPORTW/2+Math.round(40*_sc),_coinCY=_bottomCY;
-    function blitHUD(){
-        miniRenderer.render(miniScene,miniCamera);
-        tmpX.save();
-        tmpX.font='bold '+Math.round(hudTitlePx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2; tmpX.shadowColor='rgba('+COLOR_THEMES[currentTheme].neonGlow+',0.45)';
-        tmpX.shadowBlur=Math.round(hudTitlePx*_sc);
-        tmpX.textAlign='center'; tmpX.textBaseline='top';
-        tmpX.fillText(_titleStr,EXPORTW/2,_titleWrapY); tmpX.restore();
-        tmpX.save();
-        tmpX.font='bold '+Math.round(hudCounterPx*_sc)+'px "Segoe UI",system-ui,sans-serif';
-        tmpX.fillStyle=COLOR_THEMES[currentTheme].green2; tmpX.textAlign='right'; tmpX.textBaseline='middle';
-        tmpX.fillText(_cntStr,EXPORTW/2-Math.round(7*_sc),_bottomCY); tmpX.restore();
-        tmpX.save();
-        tmpX.beginPath(); tmpX.arc(_coinCX,_coinCY,_coinR,0,Math.PI*2); tmpX.clip();
-        tmpX.globalAlpha=0.92;
-        tmpX.drawImage(miniRenderer.domElement,_coinCX-_coinR,_coinCY-_coinR,_coinR*2,_coinR*2);
-        tmpX.restore();
-        if(sqNeonOn){
-            tmpX.save();
-            var _ni=sqNeonInset*_sc,_nw=sqNeonBW*_sc,_ng=sqNeonGlow*_sc;
-            tmpX.strokeStyle=sqNeonColorHex; tmpX.lineWidth=_nw;
-            tmpX.shadowColor=sqNeonColorHex; tmpX.shadowBlur=_ng;
-            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-            tmpX.strokeRect(_ni+_nw/2,_ni+_nw/2,EXPORTW-2*_ni-_nw,EXPORTH-2*_ni-_nw);
-            tmpX.restore();
-        }
-    }
-
-    function setSceneToS(s){
-        pivot.rotation.y=2*Math.PI*s; pivot.rotation.x=0;
-        pivot.position.y=panelYOffset+Math.sin(2*Math.PI*s)*.03;
-        if(pointOn){
-            point.position.x=Math.cos(2*Math.PI*s)*3.5;
-            point.position.y=1+Math.sin(2*Math.PI*s)*1.2;
-            point.position.z=3+Math.sin(2*Math.PI*s);
-            point.intensity=pointIntScale*(0.8+Math.sin(4*Math.PI*s)*.18);
-        }
-        coinMesh.rotation.x=Math.PI/2+coinXTilt; coinMesh.rotation.y=coinYTilt;
-        coinMesh.rotation.z=4*Math.PI*s;
-        backCoin3D.rotation.x=-Math.PI/2; backCoin3D.rotation.y=0; backCoin3D.rotation.z=0;
-        backCoin3D.scale.set(backCoinScale,1,backCoinScale);
-        camera.position.z=zoom;
-    }
+    var st=saveExportState(EXPORTW,EXPORTH);
+    var tmpC=st.tmpC, tmpX=st.tmpX;
+    function restoreState(){st.restore();}
+    var blitHUD=makeHUDBlitter(EXPORTW,EXPORTH,tmpX,idx);
 
     /* save finished blob — directory handle or auto-download */
     function saveBlob(blob){
@@ -4567,21 +4332,9 @@ function exportBatchItem(idx,format,dirHandle,onDone){
     function renderFrame(){
         if(frame>=TOTAL){recorder.stop(); return;}
         setSceneToS(frame/TOTAL);
-        if(mistOn&&mistTextures.length){
-            var tE=frame*0.008;
-            mistTextures[0].offset.set(tE*mistSpeed*0.012,tE*mistSpeed*0.009);
-            if(mistTextures[1])mistTextures[1].offset.set(-tE*mistSpeed*0.009,tE*mistSpeed*0.013);
-            if(mistTextures[2])mistTextures[2].offset.set(tE*mistSpeed*0.007+Math.sin(tE*0.4)*mistSpeed*0.018,-tE*mistSpeed*0.011);
-        }
+        syncMistToFrame(frame*0.008);
         updateSlimeWall(frame*(DURATION*1000/TOTAL));
-        renderer.render(scene,camera);
-        tmpX.clearRect(0,0,EXPORTW,EXPORTH);
-        var _gb=GOOP_CFG.zLayer==='-1';
-        if(_gb){tmpX.fillStyle=COLOR_THEMES[currentTheme].bg;tmpX.fillRect(0,0,EXPORTW,EXPORTH);blitGoopExport(tmpX,EXPORTW,EXPORTH);}
-        tmpX.drawImage(renderer.domElement,0,0);
-        if(!_gb)blitGoopExport(tmpX,EXPORTW,EXPORTH);
-        drawEdgeGlow(tmpX,EXPORTW,EXPORTH); drawFlareOnto(tmpX,EXPORTW,EXPORTH);
-        blitHUD();
+        compositeExportFrame(tmpX,EXPORTW,EXPORTH,blitHUD);
         videoTrack.requestFrame(); frame++;
         document.getElementById('b-item-bar').style.width=(frame/TOTAL*50)+'%';
         document.getElementById('b-status').textContent='Frame '+frame+' / '+TOTAL
