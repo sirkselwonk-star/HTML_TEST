@@ -43,6 +43,34 @@ header h1{display:flex;justify-content:center;animation:neon-flicker 4s infinite
     drop-shadow(0 0 7px #fff) drop-shadow(0 0 21px #fff)
     drop-shadow(0 0 42px var(--neon)) drop-shadow(0 0 82px var(--neon)) drop-shadow(0 0 120px var(--neon))}
 header h1 svg{height:clamp(4rem,13vw,7.9rem);width:auto}
+@keyframes tie-dye-swirl{
+  0%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(4px -3px 18px #ff0088) drop-shadow(-4px 3px 18px #00e5ff)
+    drop-shadow(0 -4px 22px #ffee00) drop-shadow(0 4px 22px #bf00ff)
+    drop-shadow(0 0 60px #ff0088) drop-shadow(0 0 100px #bf00ff)}
+  25%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(3px 4px 18px #00e5ff) drop-shadow(-3px -4px 18px #ffee00)
+    drop-shadow(4px 0 22px #bf00ff) drop-shadow(-4px 0 22px #ff0088)
+    drop-shadow(0 0 60px #00e5ff) drop-shadow(0 0 100px #ff0088)}
+  50%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(-4px 3px 18px #ffee00) drop-shadow(4px -3px 18px #bf00ff)
+    drop-shadow(0 4px 22px #ff0088) drop-shadow(0 -4px 22px #00e5ff)
+    drop-shadow(0 0 60px #ffee00) drop-shadow(0 0 100px #00e5ff)}
+  75%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(-3px -4px 18px #bf00ff) drop-shadow(3px 4px 18px #ff0088)
+    drop-shadow(-4px 0 22px #00e5ff) drop-shadow(4px 0 22px #ffee00)
+    drop-shadow(0 0 60px #bf00ff) drop-shadow(0 0 100px #ffee00)}
+  100%{filter:
+    drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000)
+    drop-shadow(4px -3px 18px #ff0088) drop-shadow(-4px 3px 18px #00e5ff)
+    drop-shadow(0 -4px 22px #ffee00) drop-shadow(0 4px 22px #bf00ff)
+    drop-shadow(0 0 60px #ff0088) drop-shadow(0 0 100px #bf00ff)}
+}
+header h1.tie-dye{animation:tie-dye-swirl 6s linear infinite}
 header p{margin-top:12px;font-size:.85rem;color:var(--muted);letter-spacing:.28em;text-transform:uppercase}
 .badge{display:inline-block;margin-top:18px;padding:5px 18px;border:1px solid var(--green);
   border-radius:40px;font-size:.72rem;letter-spacing:.2em;color:var(--green);text-transform:uppercase}
@@ -1074,6 +1102,10 @@ function applyColorTheme(name){
   document.querySelectorAll('.theme-btn').forEach(function(b){
     b.classList.toggle('active',b.getAttribute('data-theme')===name);
   });
+
+  /* tie-dye swirl on pink theme */
+  var h1=document.querySelector('header h1');
+  if(h1) h1.classList.toggle('tie-dye',name==='pink');
 
   /* ── 3D Scene updates (only if scene is initialized) ── */
   if(typeof ambient!=='undefined'){
