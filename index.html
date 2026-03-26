@@ -2499,10 +2499,18 @@ var IPFS_GW='https://ipfs.io/ipfs/';
 var SENTX_ACCT='0.0.1064038';
 var traitsCache={};
 var spenderCache={};
+var traitsPending={}; /* queued callbacks while a fetch is in-flight */
 function fetchTraits(serial,cb){
   if(traitsCache[serial]!==undefined){cb(traitsCache[serial],spenderCache[serial]||null);return;}
-  traitsCache[serial]=null;
+  if(traitsPending[serial]){traitsPending[serial].push(cb);return;}
+  traitsPending[serial]=[cb];
   var spender=null;
+  function flush(attrs,sp){
+    traitsCache[serial]=attrs; spenderCache[serial]=sp;
+    var cbs=traitsPending[serial]||[];
+    delete traitsPending[serial];
+    cbs.forEach(function(fn){fn(attrs,sp);});
+  }
   fetch(MIRROR_NODE+'/api/v1/tokens/'+HEDERA_TOKEN+'/nfts/'+serial)
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2513,11 +2521,9 @@ function fetchTraits(serial,cb){
     .then(function(r){return r.json();})
     .then(function(m){
       var a=m.attributes||m.properties||[];
-      traitsCache[serial]=Array.isArray(a)?a:[];
-      spenderCache[serial]=spender;
-      cb(traitsCache[serial],spender);
+      flush(Array.isArray(a)?a:[],spender);
     })
-    .catch(function(){traitsCache[serial]=[];spenderCache[serial]=null;cb([],null);});
+    .catch(function(){flush([],null);});
 }
 var rotX=0,rotY=0,zoom=6.0,lbOpen=false,cur=0,animating=false;
 var panelYOffset=0.25;
@@ -2753,8 +2759,9 @@ function loadNFT(index,cb){
             ctx.drawImage(this,sx,sy,s,s,0,0,sz,sz);
             var coinTex=new THREE.CanvasTexture(oc);
             coinTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-            if(coinFace.map)coinFace.map.dispose();
-            if(coinBack.map)coinBack.map.dispose();
+            // save old textures before reassigning so we dispose after swap
+            var oldCoinFace=coinFace.map, oldCoinBack=coinBack.map;
+            var oldMcf=miniCoinFace.map, oldMcb=miniCoinBack.map;
             coinBack.map=makeBackTex(COLOR_THEMES[currentTheme].backTex,COLOR_THEMES[currentTheme].backTexBg);
             coinBack.map.anisotropy=renderer.capabilities.getMaxAnisotropy();
             coinBack.needsUpdate=true;
@@ -2764,12 +2771,15 @@ function loadNFT(index,cb){
             coinFace.map=coinTex;
             coinFace.needsUpdate=true;
             applyFaceTex();
-            if(miniCoinFace.map)miniCoinFace.map.dispose();
             miniCoinFace.map=coinTex.clone(); miniCoinFace.map.needsUpdate=true;
             applyMiniCoinFaceTex();
-            if(miniCoinBack.map)miniCoinBack.map.dispose();
             miniCoinBack.map=coinTex.clone(); miniCoinBack.map.needsUpdate=true;
             applyMiniCoinBackTex();
+            // dispose old textures now that new ones are assigned
+            if(oldCoinFace)oldCoinFace.dispose();
+            if(oldCoinBack)oldCoinBack.dispose();
+            if(oldMcf)oldMcf.dispose();
+            if(oldMcb)oldMcb.dispose();
             done();
         };
         coinImg.onerror=function(){ done(); }; // skip coin gracefully on error
@@ -3701,16 +3711,15 @@ function startVideoExport(){
             }
         });
 
-        video.addEventListener('loadedmetadata',function(){
-            vDuration=video.duration;
-            document.getElementById('gif-phase').textContent='Converting to GIF\u2026';
-            seekNext();
-        });
-        if(video.readyState>=1){
+        var _metaStarted=false;
+        function startFromMeta(){
+            if(_metaStarted)return; _metaStarted=true;
             vDuration=video.duration;
             document.getElementById('gif-phase').textContent='Converting to GIF\u2026';
             seekNext();
         }
+        video.addEventListener('loadedmetadata',startFromMeta);
+        if(video.readyState>=1) startFromMeta();
     }
 
     /* render loop */
@@ -4071,8 +4080,10 @@ function startConvertToGif(file){
                 seekNext();
             }
 
-            if(video.readyState>=1){runConversion();}
-            else{video.addEventListener('loadedmetadata',runConversion);}
+            var _convStarted=false;
+            function startConv(){if(_convStarted)return;_convStarted=true;runConversion();}
+            if(video.readyState>=1){startConv();}
+            else{video.addEventListener('loadedmetadata',startConv);}
         })
         .catch(function(e){
             dismiss();
@@ -4530,8 +4541,10 @@ function exportBatchItem(idx,format,dirHandle,onDone){
                     setTimeout(seekNext,0);
                 });
                 document.getElementById('b-status').textContent='Converting GIF\u2026 \u00b7 '+(idx+1)+' / '+images.length;
-                if(video.readyState>=1) seekNext();
-                else video.addEventListener('loadedmetadata',seekNext);
+                var _batchMetaStarted=false;
+                function batchStartSeek(){if(_batchMetaStarted)return;_batchMetaStarted=true;seekNext();}
+                if(video.readyState>=1) batchStartSeek();
+                else video.addEventListener('loadedmetadata',batchStartSeek);
             })
             .catch(function(e){saveBlob(videoBlob);});
     };
