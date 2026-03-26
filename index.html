@@ -2357,11 +2357,13 @@ var goopPhysicsLast=0;
 /* type: 0=body, 1=tentacle tip, 2=tentacle mid (interpolated at runtime) */
 var slimePts=[
     {x: 0.00,y: 0.50, weight:0.6, type:0},              /* 0: body center */
-    {x:-0.40,y: 0.45, weight:0.3, type:2, tipIdx:0},    /* head wide L */
-    {x: 0.40,y: 0.45, weight:0.3, type:2, tipIdx:0},    /* head wide R */
-    {x:-0.30,y: 0.55, weight:0.25,type:2, tipIdx:0},    /* dome L */
-    {x: 0.30,y: 0.55, weight:0.25,type:2, tipIdx:0},    /* dome R */
-    {x: 0.00,y: 0.58, weight:0.3, type:2, tipIdx:0},    /* dome top */
+    {x:-0.50,y: 0.42, weight:0.35,type:2, tipIdx:0},    /* head wide L */
+    {x: 0.50,y: 0.42, weight:0.35,type:2, tipIdx:0},    /* head wide R */
+    {x:-0.35,y: 0.55, weight:0.3, type:2, tipIdx:0},    /* dome L */
+    {x: 0.35,y: 0.55, weight:0.3, type:2, tipIdx:0},    /* dome R */
+    {x:-0.15,y: 0.60, weight:0.3, type:2, tipIdx:0},    /* dome inner L */
+    {x: 0.15,y: 0.60, weight:0.3, type:2, tipIdx:0},    /* dome inner R */
+    {x: 0.00,y: 0.62, weight:0.35,type:2, tipIdx:0},    /* dome top */
     {x:-0.50,y:-2.00, weight:0.15,type:1, tentId:0},     /* 1: tent L outer tip */
     {x:-0.20,y:-2.50, weight:0.12,type:1, tentId:1},     /* 2: tent L inner tip */
     {x: 0.20,y:-2.50, weight:0.12,type:1, tentId:2},     /* 3: tent R inner tip */
