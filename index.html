@@ -2349,20 +2349,20 @@ var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),
     new THREE.MeshStandardMaterial({color:0x010f03,roughness:.15}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; scene.add(floor);
 
-/* ── Tie-dye 3D goop blobs: 4 slime silhouettes (pink theme) ── */
-var tieDyeBlobs3D=[];
+/* ── Tie-dye 3D slime creatures: skin mesh over anchor points (pink theme) ── */
+var tieDyeBlobs3D=[];  /* anchor point data (invisible) */
+var tieDyeSkins=[];    /* visible skin meshes */
 var goopPhysicsLast=0;
-/* Slime body parts: one large head/body blob + 4 attached tentacles */
+/* Slime anchor points (head+body center, 4 tentacle tips) */
 var slimePts=[
-        {x: 0.00,y: 0.20,r:0.30, sx:1.0,sy:1.4,sz:0.85},     /* head+body — tall bulbous blob */
-        {x:-0.38,y:-0.55,r:0.10, sx:0.7,sy:4.5,sz:0.7},       /* tentacle L outer */
-        {x:-0.14,y:-0.75,r:0.09, sx:0.65,sy:5.2,sz:0.65},     /* tentacle L inner */
-        {x: 0.14,y:-0.75,r:0.09, sx:0.65,sy:5.2,sz:0.65},     /* tentacle R inner */
-        {x: 0.38,y:-0.55,r:0.10, sx:0.7,sy:4.5,sz:0.7},       /* tentacle R outer */
+    {x: 0.00,y: 0.25, weight:0.5},   /* head+body */
+    {x:-0.35,y:-0.60, weight:0.18},   /* tentacle L outer */
+    {x:-0.13,y:-0.80, weight:0.15},   /* tentacle L inner */
+    {x: 0.13,y:-0.80, weight:0.15},   /* tentacle R inner */
+    {x: 0.35,y:-0.60, weight:0.18},   /* tentacle R outer */
 ];
 (function(){
     var blobColors=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
-    /* 4 formation centers spread behind the panel */
     var formations=[
         {cx:-1.8, cy: 0.2, cz:-1.3, scale:1.2},
         {cx:-0.5, cy:-0.1, cz:-1.5, scale:1.0},
@@ -2371,63 +2371,84 @@ var slimePts=[
     ];
     for(var fi=0;fi<4;fi++){
         var f=formations[fi];
+        var anchors=[];
         for(var pi=0;pi<slimePts.length;pi++){
             var sp=slimePts[pi];
-            var r=sp.r*f.scale;
-            var geo=new THREE.SphereGeometry(r,14,10);
-            /* For tentacles, shift geometry down so top is at origin (pivot from top) */
-            if(pi>0){
-                var pos=geo.attributes.position;
-                for(var vi=0;vi<pos.count;vi++) pos.array[vi*3+1]-=r;
-                pos.needsUpdate=true;
-                geo.computeBoundingSphere();
-            }
-            var origPos=new Float32Array(geo.attributes.position.array);
-            var mat=new THREE.MeshPhongMaterial({
-                color:blobColors[fi],emissive:blobColors[fi],
-                emissiveIntensity:0.6,transparent:true,opacity:0.45,
-                blending:THREE.AdditiveBlending,depthWrite:false,
-                shininess:90,specular:0xffffff
-            });
-            var mesh=new THREE.Mesh(geo,mat);
-            mesh.visible=false;
-            /* Apply elongation scale */
-            mesh.scale.set(sp.sx,sp.sy,sp.sz);
-            scene.add(mesh);
             var tx=f.cx+sp.x*f.scale;
             var ty=f.cy+sp.y*f.scale;
             var tz=f.cz;
-            tieDyeBlobs3D.push({
-                mesh:mesh,ci:fi,origPos:origPos,seed:(fi*9+pi)*3.7,
-                radius:r,baseScale:{x:sp.sx,y:sp.sy,z:sp.sz},
-                partIndex:pi, groupIndex:fi,
+            var a={
+                ci:fi,partIndex:pi,groupIndex:fi,
+                seed:(fi*9+pi)*3.7,weight:sp.weight,
                 tx:tx,ty:ty,tz:tz,
-                px:tx+(Math.random()-0.5)*0.2,
-                py:ty+(Math.random()-0.5)*0.2,
-                pz:tz+(Math.random()-0.5)*0.1,
+                px:tx,py:ty,pz:tz,
                 vx:0,vy:0,vz:0
-            });
+            };
+            /* Tentacles get swing state */
+            if(pi>0){a._swingAngle=0;a._swingVel=0;a._swingZ=0;a._swingVelZ=0;}
+            anchors.push(a);
+            tieDyeBlobs3D.push(a);
         }
+        /* Create skin mesh — high-poly sphere that deforms to wrap anchors */
+        var skinGeo=new THREE.SphereGeometry(0.5*f.scale,24,18);
+        var skinOrigPos=new Float32Array(skinGeo.attributes.position.array);
+        var skinMat=new THREE.MeshPhongMaterial({
+            color:blobColors[fi],emissive:blobColors[fi],
+            emissiveIntensity:0.6,transparent:true,opacity:0.45,
+            blending:THREE.AdditiveBlending,depthWrite:false,
+            shininess:90,specular:0xffffff
+        });
+        var skinMesh=new THREE.Mesh(skinGeo,skinMat);
+        skinMesh.visible=false;
+        scene.add(skinMesh);
+        tieDyeSkins.push({
+            mesh:skinMesh,origPos:skinOrigPos,anchors:anchors,
+            ci:fi,seed:fi*13.7,cx:f.cx,cy:f.cy,cz:f.cz,scale:f.scale
+        });
     }
 })();
-function wobbleGoopVerts(blob,time){
-    var pos=blob.mesh.geometry.attributes.position;
-    var orig=blob.origPos;
-    var s=blob.seed;
+/* Deform skin mesh vertices toward nearest anchor positions */
+function deformSkin(skin,time){
+    var pos=skin.mesh.geometry.attributes.position;
+    var orig=skin.origPos;
+    var anchors=skin.anchors;
     for(var v=0;v<pos.count;v++){
         var ox=orig[v*3],oy=orig[v*3+1],oz=orig[v*3+2];
-        var d=Math.sqrt(ox*ox+oy*oy+oz*oz);
-        if(d<0.001) continue;
-        var nx=ox/d,ny=oy/d,nz=oz/d;
-        var wobble=1+0.18*Math.sin(time*1.2+nx*4+s)
-                    +0.12*Math.cos(time*0.9+ny*5+s*1.3)
-                    +0.08*Math.sin(time*1.5+nz*3+s*0.7);
-        pos.array[v*3]=ox*wobble;
-        pos.array[v*3+1]=oy*wobble;
-        pos.array[v*3+2]=oz*wobble;
+        /* Start from original vertex position (relative to skin center) */
+        var wx=skin.cx+ox, wy=skin.cy+oy, wz=skin.cz+oz;
+        /* Pull vertex toward each anchor based on weight and distance */
+        var totalW=0, pullX=0, pullY=0, pullZ=0;
+        for(var ai=0;ai<anchors.length;ai++){
+            var a=anchors[ai];
+            var dx=a.px-wx, dy=a.py-wy, dz=a.pz-wz;
+            var dist=Math.sqrt(dx*dx+dy*dy+dz*dz)+0.01;
+            var w=a.weight/(dist*dist);
+            pullX+=a.px*w; pullY+=a.py*w; pullZ+=a.pz*w;
+            totalW+=w;
+        }
+        if(totalW>0){
+            pullX/=totalW; pullY/=totalW; pullZ/=totalW;
+        }
+        /* Blend between original shape and pulled position */
+        var blend=0.7;
+        var fx=wx*(1-blend)+pullX*blend;
+        var fy=wy*(1-blend)+pullY*blend;
+        var fz=wz*(1-blend)+pullZ*blend;
+        /* Add wobble */
+        var s=skin.seed;
+        var nx=ox,ny=oy,nz=oz;
+        var d=Math.sqrt(nx*nx+ny*ny+nz*nz);
+        if(d>0.001){nx/=d;ny/=d;nz/=d;}
+        var wobble=1+0.12*Math.sin(time*1.1+nx*4+s)
+                    +0.08*Math.cos(time*0.8+ny*5+s*1.3);
+        /* Store as local coords (relative to mesh position) */
+        pos.array[v*3]=(fx-skin.mesh.position.x)*wobble;
+        pos.array[v*3+1]=(fy-skin.mesh.position.y)*wobble;
+        pos.array[v*3+2]=(fz-skin.mesh.position.z)*wobble;
     }
     pos.needsUpdate=true;
-    blob.mesh.geometry.computeVertexNormals();
+    skin.mesh.geometry.computeVertexNormals();
+    skin.mesh.geometry.computeBoundingSphere();
 }
 
 
@@ -3170,102 +3191,68 @@ var tieDyeColors=[
 var tieDyeHudColors=['#ff0088','#00e5ff','#ffee00','#bf00ff'];
 function tickTieDye3D(){
     var isPink=currentTheme==='pink';
-    for(var bi=0;bi<tieDyeBlobs3D.length;bi++) tieDyeBlobs3D[bi].mesh.visible=isPink;
+    for(var si=0;si<tieDyeSkins.length;si++) tieDyeSkins[si].mesh.visible=isPink;
     if(!isPink) return;
 
-    /* Physics: blobs attracted to slime silhouette target positions */
     var now=performance.now()*0.001;
     var dt=Math.min(now-goopPhysicsLast,0.05);
     goopPhysicsLast=now;
 
-    var DRAG=0.97, REPEL=0.4, HOME=0.8;
+    var DRAG=0.97, HOME=0.8;
 
+    /* Update anchor positions */
     for(var bi=0;bi<tieDyeBlobs3D.length;bi++){
         var b=tieDyeBlobs3D[bi];
 
-        /* Spring toward home/target position */
-        var hx=b.tx-b.px, hy=b.ty-b.py, hz=b.tz-b.pz;
-        b.vx+=hx*HOME*dt;
-        b.vy+=hy*HOME*dt;
-        b.vz+=hz*HOME*dt;
-
-        /* Organic wandering (keeps it slimy, not rigid) */
-        b.vx+=Math.sin(now*0.5+b.seed)*0.03*dt;
-        b.vy+=Math.cos(now*0.4+b.seed*1.3)*0.03*dt;
-        b.vz+=Math.sin(now*0.3+b.seed*0.7)*0.01*dt;
-
-        /* Tentacles: anchor top to body bottom, gravity pulls tip down */
-        if(b.partIndex>0){
+        if(b.partIndex===0){
+            /* Body: spring toward home + wander */
+            var hx=b.tx-b.px, hy=b.ty-b.py, hz=b.tz-b.pz;
+            b.vx+=hx*HOME*dt;
+            b.vy+=hy*HOME*dt;
+            b.vz+=hz*HOME*dt;
+            b.vx+=Math.sin(now*0.5+b.seed)*0.03*dt;
+            b.vy+=Math.cos(now*0.4+b.seed*1.3)*0.03*dt;
+            b.vz+=Math.sin(now*0.3+b.seed*0.7)*0.01*dt;
+            b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG;
+            b.px+=b.vx*dt; b.py+=b.vy*dt; b.pz+=b.vz*dt;
+        }else{
+            /* Tentacle tip: anchored to body bottom, swings with gravity */
             var PARTS_PER=slimePts.length;
             var bodyIdx=b.groupIndex*PARTS_PER;
             var body=tieDyeBlobs3D[bodyIdx];
-            /* Attachment point: offset from body center toward this tentacle's x */
             var sp=slimePts[b.partIndex];
-            var attachX=body.px+sp.x*0.5;
-            var attachY=body.py-body.radius*body.baseScale.y*0.7;
-            var attachZ=body.pz;
 
-            /* Hard anchor: snap top of tentacle to attachment point */
-            b.px=attachX;
-            b.py=attachY;
-            b.pz=attachZ;
-            b.vx=0; b.vy=0; b.vz=0;
-
-            /* Gravity on the tip via rotation — swing angle accumulates */
-            if(!b._swingAngle) b._swingAngle=0;
-            if(!b._swingVel) b._swingVel=0;
-            /* Pendulum physics: gravity pulls tip down, damped */
-            var SWING_GRAV=0.8;
+            /* Swing physics (pendulum from attachment point) */
+            var SWING_GRAV=0.6;
             var SWING_DAMP=0.97;
-            var SWING_WANDER=0.15;
+            var SWING_WANDER=0.12;
             b._swingVel+=-Math.sin(b._swingAngle)*SWING_GRAV*dt;
             b._swingVel+=Math.sin(now*0.4+b.seed)*SWING_WANDER*dt;
             b._swingVel*=SWING_DAMP;
             b._swingAngle+=b._swingVel*dt;
-            /* Clamp swing to reasonable range */
-            b._swingAngle=Math.max(-0.6,Math.min(0.6,b._swingAngle));
-            /* Z swing too */
-            if(!b._swingZ) b._swingZ=0;
-            if(!b._swingVelZ) b._swingVelZ=0;
-            b._swingVelZ+=-Math.sin(b._swingZ)*SWING_GRAV*0.5*dt;
-            b._swingVelZ+=Math.cos(now*0.3+b.seed*1.5)*SWING_WANDER*0.5*dt;
+            b._swingAngle=Math.max(-0.5,Math.min(0.5,b._swingAngle));
+
+            b._swingVelZ+=-Math.sin(b._swingZ)*SWING_GRAV*0.4*dt;
+            b._swingVelZ+=Math.cos(now*0.3+b.seed*1.5)*SWING_WANDER*0.4*dt;
             b._swingVelZ*=SWING_DAMP;
             b._swingZ+=b._swingVelZ*dt;
-            b._swingZ=Math.max(-0.4,Math.min(0.4,b._swingZ));
+            b._swingZ=Math.max(-0.35,Math.min(0.35,b._swingZ));
 
-            b.mesh.rotation.set(b._swingZ, 0, b._swingAngle);
+            /* Tentacle tip position = attachment point + swing offset */
+            var tentLen=Math.abs(sp.y)*1.2;
+            b.px=body.px+sp.x*0.6+Math.sin(b._swingAngle)*tentLen;
+            b.py=body.py-0.3-Math.cos(b._swingAngle)*tentLen;
+            b.pz=body.pz+Math.sin(b._swingZ)*tentLen*0.5;
         }
+    }
 
-        /* Repel from nearby blobs (prevents overlap, but not same-group body) */
-        for(var bj=bi+1;bj<tieDyeBlobs3D.length;bj++){
-            var o=tieDyeBlobs3D[bj];
-            /* Skip body-tentacle pairs in same group (they should overlap slightly) */
-            if(b.groupIndex===o.groupIndex&&(b.partIndex===0||o.partIndex===0)) continue;
-            var dx=b.px-o.px,dy=b.py-o.py,dz=b.pz-o.pz;
-            var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
-            var minD=b.radius+o.radius+0.02;
-            if(dist<minD&&dist>0.001){
-                var push=REPEL*(minD-dist)/dist*dt;
-                b.vx+=dx*push; b.vy+=dy*push; b.vz+=dz*push;
-                o.vx-=dx*push; o.vy-=dy*push; o.vz-=dz*push;
-            }
-        }
-
-        /* Drag */
-        b.vx*=DRAG; b.vy*=DRAG; b.vz*=DRAG;
-
-        /* Integrate */
-        b.px+=b.vx*dt; b.py+=b.vy*dt; b.pz+=b.vz*dt;
-
-        /* Apply to mesh — preserve base elongation scale + slight breathe */
-        b.mesh.position.set(b.px,b.py,b.pz);
-        var breathe=1+Math.sin(now*0.6+b.seed)*0.08;
-        var bs=b.baseScale;
-        b.mesh.scale.set(bs.x*breathe,bs.y*breathe,bs.z*breathe);
-        b.mesh.rotation.x+=b.vy*0.15;
-        b.mesh.rotation.y+=b.vx*0.15;
-        b.mesh.material.opacity=0.4+Math.sin(now*0.4+bi)*0.08;
-        wobbleGoopVerts(b,now);
+    /* Deform skin meshes to wrap around anchors */
+    for(var si=0;si<tieDyeSkins.length;si++){
+        var skin=tieDyeSkins[si];
+        /* Center skin mesh on body anchor */
+        var bodyAnchor=skin.anchors[0];
+        skin.mesh.position.set(bodyAnchor.px,bodyAnchor.py,bodyAnchor.pz);
+        deformSkin(skin,now);
     }
     var now=performance.now()*0.001;
     var speed=0.4;
