@@ -2357,6 +2357,11 @@ var goopPhysicsLast=0;
 /* type: 0=body, 1=tentacle tip, 2=tentacle mid (interpolated at runtime) */
 var slimePts=[
     {x: 0.00,y: 0.25, weight:0.5, type:0},             /* 0: head+body */
+    {x: 0.00,y: 0.55, weight:0.3, type:2, tipIdx:0},   /* head crown top */
+    {x:-0.25,y: 0.48, weight:0.2, type:2, tipIdx:0},   /* head dome L */
+    {x: 0.25,y: 0.48, weight:0.2, type:2, tipIdx:0},   /* head dome R */
+    {x:-0.18,y: 0.35, weight:0.15,type:2, tipIdx:0},   /* head side L */
+    {x: 0.18,y: 0.35, weight:0.15,type:2, tipIdx:0},   /* head side R */
     {x:-0.35,y:-3.50, weight:0.18,type:1, tentId:0},    /* 1: tent L outer tip */
     {x:-0.13,y:-4.50, weight:0.15,type:1, tentId:1},    /* 2: tent L inner tip */
     {x: 0.13,y:-4.50, weight:0.15,type:1, tentId:2},    /* 3: tent R inner tip */
