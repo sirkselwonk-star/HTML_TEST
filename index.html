@@ -3258,7 +3258,7 @@ function tickTieDye3D(){
         var body=tieDyeBlobs3D[bodyIdx];
         var sp=slimePts[b.partIndex];
 
-        var SWING_GRAV=0.6,SWING_DAMP=0.97,SWING_WANDER=0.12;
+        var SWING_GRAV=1.8,SWING_DAMP=0.97,SWING_WANDER=0.12;
         b._swingVel+=-Math.sin(b._swingAngle)*SWING_GRAV*dt;
         b._swingVel+=Math.sin(now*0.4+b.seed)*SWING_WANDER*dt;
         b._swingVel*=SWING_DAMP;
