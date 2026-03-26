@@ -2357,26 +2357,26 @@ var goopPhysicsLast=0;
 /* type: 0=body, 1=tentacle tip, 2=tentacle mid (interpolated at runtime) */
 var slimePts=[
     {x: 0.00,y: 0.25, weight:0.5, type:0},             /* 0: head+body */
-    {x:-0.35,y:-0.60, weight:0.18,type:1, tentId:0},    /* 1: tent L outer tip */
-    {x:-0.13,y:-0.80, weight:0.15,type:1, tentId:1},    /* 2: tent L inner tip */
-    {x: 0.13,y:-0.80, weight:0.15,type:1, tentId:2},    /* 3: tent R inner tip */
-    {x: 0.35,y:-0.60, weight:0.18,type:1, tentId:3},    /* 4: tent R outer tip */
-    {x:-0.28,y:-0.10, weight:0.14,type:2, tipIdx:1},    /* tent L outer 20% */
-    {x:-0.30,y:-0.22, weight:0.12,type:2, tipIdx:1},    /* tent L outer 35% */
-    {x:-0.32,y:-0.35, weight:0.10,type:2, tipIdx:1},    /* tent L outer 50% */
-    {x:-0.34,y:-0.48, weight:0.09,type:2, tipIdx:1},    /* tent L outer 65% */
-    {x:-0.09,y:-0.15, weight:0.14,type:2, tipIdx:2},    /* tent L inner 20% */
-    {x:-0.10,y:-0.30, weight:0.12,type:2, tipIdx:2},    /* tent L inner 35% */
-    {x:-0.11,y:-0.45, weight:0.10,type:2, tipIdx:2},    /* tent L inner 50% */
-    {x:-0.12,y:-0.62, weight:0.09,type:2, tipIdx:2},    /* tent L inner 65% */
-    {x: 0.09,y:-0.15, weight:0.14,type:2, tipIdx:3},    /* tent R inner 20% */
-    {x: 0.10,y:-0.30, weight:0.12,type:2, tipIdx:3},    /* tent R inner 35% */
-    {x: 0.11,y:-0.45, weight:0.10,type:2, tipIdx:3},    /* tent R inner 50% */
-    {x: 0.12,y:-0.62, weight:0.09,type:2, tipIdx:3},    /* tent R inner 65% */
-    {x: 0.28,y:-0.10, weight:0.14,type:2, tipIdx:4},    /* tent R outer 20% */
-    {x: 0.30,y:-0.22, weight:0.12,type:2, tipIdx:4},    /* tent R outer 35% */
-    {x: 0.32,y:-0.35, weight:0.10,type:2, tipIdx:4},    /* tent R outer 50% */
-    {x: 0.34,y:-0.48, weight:0.09,type:2, tipIdx:4},    /* tent R outer 65% */
+    {x:-0.35,y:-1.00, weight:0.18,type:1, tentId:0},    /* 1: tent L outer tip */
+    {x:-0.13,y:-1.30, weight:0.15,type:1, tentId:1},    /* 2: tent L inner tip */
+    {x: 0.13,y:-1.30, weight:0.15,type:1, tentId:2},    /* 3: tent R inner tip */
+    {x: 0.35,y:-1.00, weight:0.18,type:1, tentId:3},    /* 4: tent R outer tip */
+    {x:-0.28,y:-0.15, weight:0.14,type:2, tipIdx:1},    /* tent L outer 15% */
+    {x:-0.30,y:-0.32, weight:0.12,type:2, tipIdx:1},    /* tent L outer 30% */
+    {x:-0.32,y:-0.52, weight:0.10,type:2, tipIdx:1},    /* tent L outer 48% */
+    {x:-0.34,y:-0.75, weight:0.09,type:2, tipIdx:1},    /* tent L outer 65% */
+    {x:-0.09,y:-0.20, weight:0.14,type:2, tipIdx:2},    /* tent L inner 15% */
+    {x:-0.10,y:-0.45, weight:0.12,type:2, tipIdx:2},    /* tent L inner 30% */
+    {x:-0.11,y:-0.70, weight:0.10,type:2, tipIdx:2},    /* tent L inner 48% */
+    {x:-0.12,y:-1.00, weight:0.09,type:2, tipIdx:2},    /* tent L inner 65% */
+    {x: 0.09,y:-0.20, weight:0.14,type:2, tipIdx:3},    /* tent R inner 15% */
+    {x: 0.10,y:-0.45, weight:0.12,type:2, tipIdx:3},    /* tent R inner 30% */
+    {x: 0.11,y:-0.70, weight:0.10,type:2, tipIdx:3},    /* tent R inner 48% */
+    {x: 0.12,y:-1.00, weight:0.09,type:2, tipIdx:3},    /* tent R inner 65% */
+    {x: 0.28,y:-0.15, weight:0.14,type:2, tipIdx:4},    /* tent R outer 15% */
+    {x: 0.30,y:-0.32, weight:0.12,type:2, tipIdx:4},    /* tent R outer 30% */
+    {x: 0.32,y:-0.52, weight:0.10,type:2, tipIdx:4},    /* tent R outer 48% */
+    {x: 0.34,y:-0.75, weight:0.09,type:2, tipIdx:4},    /* tent R outer 65% */
 ];
 (function(){
     var blobColors=[0xff0088,0x00e5ff,0xffee00,0xbf00ff];
