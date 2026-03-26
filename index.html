@@ -4949,6 +4949,28 @@ function exportPivotToGLB(callback){
 
     arGroup.add(pivotClone);
 
+    /* Include tie-dye slime blob in AR when pink theme is active */
+    if(currentTheme==='pink'&&tieDyeSkins.length>0){
+        for(var si=0;si<tieDyeSkins.length;si++){
+            var skin=tieDyeSkins[si];
+            if(!skin.mesh.visible) continue;
+            var blobClone=skin.mesh.clone();
+            /* Convert to GLB-compatible material (no additive blending) */
+            blobClone.material=new THREE.MeshStandardMaterial({
+                color:skin.mesh.material.color.clone(),
+                emissive:skin.mesh.material.emissive.clone(),
+                emissiveIntensity:0.4,
+                transparent:true,
+                opacity:0.6,
+                metalness:0.1,
+                roughness:0.3
+            });
+            /* Copy current geometry state (deformed shape) */
+            blobClone.geometry=skin.mesh.geometry.clone();
+            arGroup.add(blobClone);
+        }
+    }
+
     var arAmb=new THREE.AmbientLight(0xffffff,0.8);
     var arKey=new THREE.DirectionalLight(0xffffff,1.0);
     arKey.position.set(2,3,4);
