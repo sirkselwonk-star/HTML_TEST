@@ -167,7 +167,6 @@ select.ctrl-select:focus{border-color:var(--green)}
 /* Touch devices: always show card labels, skip hover effects */
 @media (hover:none),(pointer:coarse){
   #sq-neon-hud{inset:8px}
-  #ctrl-panel{}
   .card-label{opacity:1}
   .card:hover{transform:none;box-shadow:0 0 12px rgba(var(--neon-glow),.12);border-color:var(--border-dk)}
   .card:active{border-color:var(--green);box-shadow:0 4px 20px rgba(var(--neon-glow),.35)}
@@ -1135,8 +1134,7 @@ document.querySelectorAll('.theme-btn').forEach(function(btn){
 });
 
 /* ===== IMAGE LIST ===== */
-const COINS = ['SLIME_COIN.png','SLIME_COIN.png','SLIME_COIN.png'];
-const images = [
+var images = [
   {src:'https://ipfs.io/ipfs/bafybeid5qfc4h26jt3bkbvqghrlpryby2jezswjbwkpkjyqhzf4xpkztem/SLIME%20503.png',title:'SLIME #503',coin:'SLIME_COIN.png'},
   {src:'https://ipfs.io/ipfs/bafybeid5qfc4h26jt3bkbvqghrlpryby2jezswjbwkpkjyqhzf4xpkztem/SLIME%20502.png',title:'SLIME #502',coin:'SLIME_COIN.png'},
   {src:'https://ipfs.io/ipfs/bafybeid5qfc4h26jt3bkbvqghrlpryby2jezswjbwkpkjyqhzf4xpkztem/SLIME%20501.png',title:'SLIME #501',coin:'SLIME_COIN.png'},
@@ -2140,22 +2138,22 @@ const images = [
 ];
 
 /* ===== THREE.JS SETUP ===== */
-const c3d      = document.getElementById('c3d');
-const renderer = new THREE.WebGLRenderer({canvas:c3d,antialias:true,alpha:true});
+var c3d      = document.getElementById('c3d');
+var renderer = new THREE.WebGLRenderer({canvas:c3d,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.setClearColor(0x000000,0);
 renderer.shadowMap.enabled=true;
 
-const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(40,1,0.1,100);
+var scene  = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(40,1,0.1,100);
 camera.position.set(0,0,6.0);
 
 /* ── Lights ── */
 var ambient=new THREE.AmbientLight(0x011a05,2.0); scene.add(ambient);
-const key=new THREE.DirectionalLight(0xf0fff4,1.3); key.position.set(3,5,5); key.castShadow=true; scene.add(key);
-const fill=new THREE.DirectionalLight(0x22c55e,0.45); fill.position.set(-4,-2,2); scene.add(fill);
-const rim=new THREE.DirectionalLight(0xffffff,0.35); rim.position.set(0,3,-5); scene.add(rim);
-const point=new THREE.PointLight(0xffffff,0.9,20); point.position.set(2,2,3); scene.add(point);
+var key=new THREE.DirectionalLight(0xf0fff4,1.3); key.position.set(3,5,5); key.castShadow=true; scene.add(key);
+var fill=new THREE.DirectionalLight(0x22c55e,0.45); fill.position.set(-4,-2,2); scene.add(fill);
+var rim=new THREE.DirectionalLight(0xffffff,0.35); rim.position.set(0,3,-5); scene.add(rim);
+var point=new THREE.PointLight(0xffffff,0.9,20); point.position.set(2,2,3); scene.add(point);
 var el1=new THREE.PointLight(0xffffff,0.6,30); el1.position.set(-3.5,0,3); scene.add(el1);
 var el2=new THREE.PointLight(0xffffff,0.4,30); el2.position.set(3.5,-3,3); scene.add(el2);
 
@@ -2541,7 +2539,7 @@ var coinXTilt=0,coinYTilt=0,coinZSpeed=0.18;
 var backCoinScale=1.0,backCoinXSpeed=0,backCoinYSpeed=0,backCoinZSpeed=0;
 var backCoinRotX=0,backCoinRotY=0,backCoinRotZ=0;
 var fpOffX=0,fpOffY=0,fpScale=1.0,fpRot=0,panelPosZ=0;
-var miniCoinSz=52,hudTitlePx=20,hudCounterPx=11;
+var miniCoinSz=60,hudTitlePx=25,hudCounterPx=20;
 var cfOffX=0,cfOffY=0,cfScale=1.0,cfRot=-1.57;
 var cfFlipX=false,cfFlipY=false;
 var cbOffX=0,cbOffY=0,cbScale=1.0,cbRot=-1.57;
@@ -2549,7 +2547,7 @@ var mcfOffX=0,mcfOffY=0,mcfScale=1.0,mcfRotOff=1.5,mcfSpinSpd=0,mcfRotAcc=0;
 var mcfFlipX=false,mcfFlipY=true;
 var mcbOffX=0,mcbOffY=0,mcbScale=1.0,mcbRotOff=1.5,mcbSpinSpd=0,mcbRotAcc=0;
 var mcbFlipX=false,mcbFlipY=true;
-var flareOn=true,flareInt=0.13,flareSz=1.0,flareX=0.12,flareY=-0.96,flareSpread=0.3,flareCol='#c0ffd0',flareAngle=0,flareRate=1.0;
+var flareOn=true,flareInt=0.13,flareSz=1.0,flareX=0.31,flareY=-1,flareSpread=0.3,flareCol='#a8a8a8',flareAngle=1.22,flareRate=1.0;
 var flareC=document.getElementById('flare-c');
 var flareCtx=flareC.getContext('2d');
 
@@ -2746,7 +2744,7 @@ function loadNFT(index,cb){
     });
 
     if(d.coin && d.coin!=''){
-        var coinImg=new Image();
+        var coinImg=new Image(); coinImg.crossOrigin='anonymous';
         coinImg.onload=function(){
             var sz=512,oc=document.createElement('canvas');oc.width=sz;oc.height=sz;
             var ctx=oc.getContext('2d');
@@ -3268,6 +3266,8 @@ var CTRL_IDS=[
   {id:'mcb-offx',t:'val'},{id:'mcb-offy',t:'val'},{id:'mcb-scale',t:'val'},
   {id:'mcb-rot',t:'val'},{id:'mcb-spin',t:'val'},
   {id:'mcb-flipx',t:'chk'},{id:'mcb-flipy',t:'chk'},
+  {id:'swall-on',t:'chk'},{id:'swall-spd',t:'val'},{id:'swall-cnt',t:'val'},
+  {id:'eglow-on',t:'chk'},{id:'eglow-op',t:'val'},{id:'eglow-col',t:'val'},{id:'eglow-sz',t:'val'},
   {id:'mist-on',t:'chk'},{id:'mist-op',t:'val'},{id:'mist-col',t:'val'},{id:'mist-h',t:'val'},{id:'mist-spd',t:'val'},
   {id:'dglow-on',t:'chk'},{id:'dglow-cnt',t:'val'},{id:'dglow-spd',t:'val'},{id:'dglow-int',t:'val'},{id:'dglow-rad',t:'val'},{id:'dglow-col',t:'val'},
   {id:'goop-on',t:'chk'},{id:'goop-cnt',t:'val'},{id:'goop-spd',t:'val'},{id:'goop-sz',t:'val'},{id:'goop-op',t:'val'},{id:'goop-col',t:'val'},{id:'goop-blend',t:'val'},{id:'goop-z',t:'val'},{id:'goop-margin',t:'val'},
@@ -3297,7 +3297,7 @@ function saveDefaults(){
   btn.textContent='\u2713 SAVED';btn.style.color='#86efac';
   setTimeout(function(){btn.textContent='SAVE AS DEFAULTS';btn.style.color='';},1500);
 }
-var HARDCODED_DEFAULTS={"amb-col":"#ffffff","amb-int":"0.2","amb-on":true,"bcoin-sz":"1","bcoin-depth":"0.09","bcoin-pz":"-0.0725","bcoin-xs":"0","bcoin-ys":"0","bcoin-zs":"0","bgl-px":"0","bgl-py":"0","bgl-pz":"-0.296","bgl-rx":"0","bgl-ry":"0","bgl-rz":"0","bglass-on":true,"bglass-op":"0.06","bglass-ref":"1","bglass-tint":"#2e2e2e","cb-offx":"0","cb-offy":"0","cb-rot":"-1.57","cb-scale":"1","cf-flipx":false,"cf-flipy":false,"cf-offx":"0","cf-offy":"0","cf-rot":"-1.57","cf-scale":"1","coin-xt":"0","coin-yt":"0","coin-zs":"0.18","dglow-cnt":"30","dglow-col":"#00ff64","dglow-int":"1","dglow-on":true,"dglow-rad":"4","dglow-spd":"1.8","el1-col":"#ffffff","el1-int":"0.6","el1-on":true,"el2-col":"#ffffff","el2-int":"0.4","el2-on":true,"fill-col":"#22c55e","fill-int":"0.25","fill-on":true,"flare-angle":"1.22","flare-col":"#a8a8a8","flare-int":"0.13","flare-on":true,"flare-rate":"1","flare-spread":"0.3","flare-sz":"1","flare-x":"0.31","flare-y":"-1","fp-offx":"0","fp-offy":"0","fp-rot":"0","fp-scale":"1","frame-sel":"10","front-mat":"none","gif-colors":"2","gif-dur":"15","gif-fps":"30","gif-loop":"0","gl-px":"0","gl-py":"0","gl-pz":"0.018","gl-rx":"0","gl-ry":"0","gl-rz":"0","glass-on":true,"glass-op":"0.06","glass-ref":"1","glass-tint":"#303030","hud-cntpx":"20","hud-coinsz":"60","hud-title-y":"-20","hud-titlepx":"25","key-col":"#f0fff4","key-int":"0.2","key-on":true,"mcb-flipx":false,"mcb-flipy":false,"mcb-offx":"0","mcb-offy":"0","mcb-rot":"1.5","mcb-scale":"1","mcb-spin":"0","mcf-flipx":false,"mcf-flipy":false,"mcf-offx":"0","mcf-offy":"0","mcf-rot":"1.5","mcf-scale":"1","mcf-spin":"0","mist-col":"#04ff00","mist-h":"-1.7","mist-on":true,"mist-op":"0.03","mist-spd":"1.55","panel-pz":"-0.02","point-col":"#ffffff","point-int":"0.9","point-on":true,"rim-col":"#ffffff","rim-int":"0.5","rim-on":true,"ring-col":"#13ec17","ring-glow":"0.42","ring-light-dist":"1.3","ring-light-int":"1.5","ring-light-on":true,"ring-on":true,"ring-px":"0","ring-py":"0","ring-pz":"-0.082","ring-rad":"0.92","ring-rx":"0","ring-ry":"0","ring-rz":"1.08","ring-tube":"0.029","goop-on":false,"goop-cnt":"2","goop-spd":"0.15","goop-sz":"55","goop-op":"0.75","goop-col":"#4ade80","goop-blend":"normal","goop-z":"3","goop-margin":"0.12","goop-top-on":false,"goop-top-h":"0.25","goop-top-cnt":"3","goop-top-sz":"150"};
+var HARDCODED_DEFAULTS={"amb-col":"#ffffff","amb-int":"0.2","amb-on":true,"bcoin-sz":"1","bcoin-depth":"0.09","bcoin-pz":"-0.0725","bcoin-xs":"0","bcoin-ys":"0","bcoin-zs":"0","bgl-px":"0","bgl-py":"0","bgl-pz":"-0.296","bgl-rx":"0","bgl-ry":"0","bgl-rz":"0","bglass-on":true,"bglass-op":"0.06","bglass-ref":"1","bglass-tint":"#2e2e2e","cb-offx":"0","cb-offy":"0","cb-rot":"-1.57","cb-scale":"1","cf-flipx":false,"cf-flipy":false,"cf-offx":"0","cf-offy":"0","cf-rot":"-1.57","cf-scale":"1","coin-xt":"0","coin-yt":"0","coin-zs":"0.18","dglow-cnt":"30","dglow-col":"#00ff64","dglow-int":"1","dglow-on":true,"dglow-rad":"4","dglow-spd":"1.8","el1-col":"#ffffff","el1-int":"0.6","el1-on":true,"el2-col":"#ffffff","el2-int":"0.4","el2-on":true,"fill-col":"#22c55e","fill-int":"0.25","fill-on":true,"flare-angle":"1.22","flare-col":"#a8a8a8","flare-int":"0.13","flare-on":true,"flare-rate":"1","flare-spread":"0.3","flare-sz":"1","flare-x":"0.31","flare-y":"-1","fp-offx":"0","fp-offy":"0","fp-rot":"0","fp-scale":"1","frame-sel":"10","front-mat":"none","gif-colors":"2","gif-dur":"15","gif-fps":"30","gif-loop":"0","gl-px":"0","gl-py":"0","gl-pz":"0.018","gl-rx":"0","gl-ry":"0","gl-rz":"0","glass-on":true,"glass-op":"0.06","glass-ref":"1","glass-tint":"#303030","hud-cntpx":"20","hud-coinsz":"60","hud-title-y":"-20","hud-titlepx":"25","key-col":"#f0fff4","key-int":"0.2","key-on":true,"mcb-flipx":false,"mcb-flipy":false,"mcb-offx":"0","mcb-offy":"0","mcb-rot":"1.5","mcb-scale":"1","mcb-spin":"0","mcf-flipx":false,"mcf-flipy":false,"mcf-offx":"0","mcf-offy":"0","mcf-rot":"1.5","mcf-scale":"1","mcf-spin":"0","mist-col":"#04ff00","mist-h":"-1.7","mist-on":true,"mist-op":"0.03","mist-spd":"1.55","panel-pz":"-0.02","point-col":"#ffffff","point-int":"0.9","point-on":true,"rim-col":"#ffffff","rim-int":"0.5","rim-on":true,"ring-col":"#13ec17","ring-glow":"0.42","ring-light-dist":"1.3","ring-light-int":"1.5","ring-light-on":true,"ring-on":true,"ring-px":"0","ring-py":"0","ring-pz":"-0.082","ring-rad":"0.92","ring-rx":"0","ring-ry":"0","ring-rz":"1.08","ring-tube":"0.029","goop-on":false,"goop-cnt":"2","goop-spd":"0.15","goop-sz":"55","goop-op":"0.75","goop-col":"#4ade80","goop-blend":"normal","goop-z":"3","goop-margin":"0.12","goop-top-on":false,"goop-top-h":"0.25","goop-top-cnt":"3","goop-top-sz":"150","swall-on":true,"swall-spd":"1","swall-cnt":"14","eglow-on":false,"eglow-op":"0.5","eglow-col":"#00ff64","eglow-sz":"0.28"};
 function loadDefaults(){
   try{
     var raw=localStorage.getItem(STORAGE_KEY);
@@ -3784,7 +3784,7 @@ function startMp4Export(){
         .toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||'slime_loop';
 
     function doExport(fileHandle){
-    var FPS=60,DURATION=15,TOTAL=FPS*DURATION; // 900 frames
+    var FPS=60,DURATION=parseInt(document.getElementById('gif-dur').value)||15,TOTAL=FPS*DURATION;
 
     /* read export settings from control panel */
     var _resParts=document.getElementById('export-res').value.split('x');
