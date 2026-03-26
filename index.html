@@ -1183,6 +1183,10 @@ function applyColorTheme(name){
   /* slime wall static dot color — rebuild bg canvas */
   if(typeof updateSlimeWallBgColor==='function') updateSlimeWallBgColor(t.wallDot,t.backTexBg);
 
+  /* hide floor + mist on pink theme */
+  if(typeof floor!=='undefined') floor.visible=(name!=='pink');
+  if(typeof mistLayers!=='undefined') mistLayers.forEach(function(l){l.visible=name==='pink'?false:mistOn;});
+
   /* back-of-panel brand texture */
   if(typeof rebuildBackTex==='function') rebuildBackTex(t.backTex,t.backTexBg);
 }
