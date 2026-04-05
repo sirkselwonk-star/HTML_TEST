@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -990,6 +990,10 @@ select.ctrl-select:focus{border-color:var(--green)}
 </div>
 
 <script>
+/* ===== BLOCK PINCH-ZOOM (mobile) ===== */
+document.addEventListener('touchmove',function(e){
+    if(e.touches.length>1) e.preventDefault();
+},{passive:false});
 /* ===== COLOR THEMES ===== */
 var COLOR_THEMES={
   green:{
@@ -1177,6 +1181,10 @@ function applyColorTheme(name){
 
   /* slime wall static dot color — rebuild bg canvas */
   if(typeof updateSlimeWallBgColor==='function') updateSlimeWallBgColor(t.wallDot,t.backTexBg);
+
+  /* hide floor + mist on pink theme */
+  if(typeof floor!=='undefined') floor.visible=(name!=='pink');
+  if(typeof mistLayers!=='undefined') mistLayers.forEach(function(l){l.visible=name==='pink'?false:mistOn;});
 
   /* back-of-panel brand texture */
   if(typeof rebuildBackTex==='function') rebuildBackTex(t.backTex,t.backTexBg);
@@ -2351,6 +2359,9 @@ var floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),
     new THREE.MeshStandardMaterial({color:0x010f03,roughness:.15}));
 floor.rotation.x=-Math.PI/2; floor.position.y=-1.8; floor.receiveShadow=true; scene.add(floor);
 
+
+
+
 /* ── Scene FX globals ── */
 var slimeWallOn=true, slimeWallSpeedMult=1.0, slimeDripCount=14, slimeWallMesh=null;
 var mistOn=true, mistOpacity=0.08, mistSpeed=1.55, mistColorHex='#575757';
@@ -3341,11 +3352,13 @@ function rebuildGoops(){
   for(var i=0;i<GOOP_CFG.count;i++) goops.push(new GoopBlob(i,GOOP_CFG.count,W,H));
   if(GOOP_CFG.topBand) rebuildBandGoops();
 }
+
 function animateOoze(){
   if(!goopCanvas||!goopCtx){goopAnimId=null;return;}
   goopCtx.clearRect(0,0,goopCanvas.width,goopCanvas.height);
   if(GOOP_CFG.on) goops.forEach(function(g){g.update();g.draw(goopCtx);});
   if(GOOP_CFG.topBand) bandGoops.forEach(function(g){g.update();g.draw(goopCtx);});
+
   goopAnimId=requestAnimationFrame(animateOoze);
 }
 function startGoopAnim(){
@@ -3355,6 +3368,7 @@ function startGoopAnim(){
   goopCanvas.width=window.innerWidth;goopCanvas.height=window.innerHeight;
   goopCanvas.style.mixBlendMode=GOOP_CFG.blend;
   goopCanvas.style.zIndex=GOOP_CFG.zLayer;
+
   rebuildGoops();
   if(GOOP_CFG.topBand) rebuildBandGoops();
   animateOoze();
